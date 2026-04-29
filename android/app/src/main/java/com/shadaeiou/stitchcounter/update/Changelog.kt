@@ -1,0 +1,118 @@
+package com.shadaeiou.stitchcounter.update
+
+/**
+ * Human-readable changelog. Each entry maps to the [versionCode] (which is the
+ * git commit count at build time). When you add a new feature, prepend an
+ * entry with the next versionCode and a short bulleted list of changes.
+ */
+data class ChangelogEntry(
+    val versionCode: Int,
+    val versionName: String,
+    val notes: List<String>,
+)
+
+val Changelog: List<ChangelogEntry> = listOf(
+    ChangelogEntry(
+        versionCode = 15,
+        versionName = "0.1.15",
+        notes = listOf(
+            "Add a What's new changelog under the build number in Settings.",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 14,
+        versionName = "0.1.14",
+        notes = listOf(
+            "Audible ToneGenerator click on counter increment (no longer relies on system touch-sound setting).",
+            "Increment now flashes white; decrement still flashes red.",
+            "Removed the label text box above the counter number.",
+            "Pinned notes on the counter screen auto-scale to fit and cap at 80 characters with an ellipsis. Full text is preserved on the Notes screen.",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 13,
+        versionName = "0.1.13",
+        notes = listOf(
+            "Pen strokes now anchor to the PDF page so they stay put when you zoom or pan.",
+            "Brighter, longer counter flash and click sound on every increment.",
+            "Draggable divider between the counter and PDF panes.",
+            "Toolbar toggle to hide the PDF temporarily without losing annotations.",
+            "Label edit field auto-commits on focus loss, so the keyboard no longer reappears after navigating away.",
+            "Full-screen Notes screen with multiple notes, pin/unpin (long-press), and pinned notes ribbon on the counter.",
+            "Programmable knit/purl indicator next to the counter (Tune button to edit pattern).",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 12,
+        versionName = "0.1.12",
+        notes = listOf(
+            "Pen color and thickness panel now opens via long-press on the pen toolbar button (auto-hides on the next stroke).",
+            "Undo / redo buttons appear on the PDF when the pen is selected.",
+            "Pen thickness slider now goes up to 36 px.",
+            "Fixed the History sheet close (X) button being pushed off-screen.",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 11,
+        versionName = "0.1.11",
+        notes = listOf(
+            "Pen color picker (red, black, blue) and thickness slider on the PDF.",
+            "Strokes stored in PDF coordinates so they follow zoom and pan.",
+            "More vibrant dark counter background palette.",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 10,
+        versionName = "0.1.10",
+        notes = listOf(
+            "Reset button on the counter actually fires now (was being eaten by the gesture box).",
+            "Counter label tap fixed; label is larger.",
+            "Counter number text forced to white on every background.",
+            "Settings: choose a darkened counter background color.",
+            "PDF viewer clips overflow so it can't paint over the counter.",
+            "Remove PDF now asks for confirmation and the button has a visible border.",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 9,
+        versionName = "0.1.9",
+        notes = listOf(
+            "Small reset button on the counter screen.",
+            "PDF viewer is hidden until a PDF is loaded; counter takes the full screen otherwise.",
+            "Pen never writes in the counter section.",
+            "New control to remove the loaded PDF.",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 8,
+        versionName = "0.1.8",
+        notes = listOf(
+            "Internal: explicit ListSerializer for stored strokes (compatibility fix).",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 7,
+        versionName = "0.1.7",
+        notes = listOf(
+            "Pen and eraser tools on the PDF viewer.",
+            "Notes sheet for free-form pattern notes.",
+            "Real haptics; keep-screen-on while the app is foregrounded.",
+            "Volume key counter input (configurable in Settings).",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 3,
+        versionName = "0.1.3",
+        notes = listOf(
+            "Counter polish: history sheet, color flash, debounce.",
+            "PDF fullscreen toggle (later replaced by the divider).",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 1,
+        versionName = "0.1.1",
+        notes = listOf(
+            "Initial Phase 1 scaffold: counter, project store, basic UI, CI.",
+        ),
+    ),
+)

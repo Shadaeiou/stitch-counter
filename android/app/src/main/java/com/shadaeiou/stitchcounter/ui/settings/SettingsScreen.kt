@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -20,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,6 +47,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.shadaeiou.stitchcounter.BuildConfig
 import com.shadaeiou.stitchcounter.ui.theme.CounterBackgrounds
+import com.shadaeiou.stitchcounter.update.Changelog
+import com.shadaeiou.stitchcounter.update.ChangelogEntry
 import com.shadaeiou.stitchcounter.update.DownloadResult
 import com.shadaeiou.stitchcounter.update.UpdateCheckResult
 import com.shadaeiou.stitchcounter.update.UpdateInfo
@@ -112,9 +117,14 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             Text("Updates", style = MaterialTheme.typography.titleMedium)
-            Text("Installed: ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Installed: ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                )
+            }
+            ChangelogSection(currentVersionCode = BuildConfig.VERSION_CODE)
 
             Button(
                 onClick = {
@@ -163,6 +173,73 @@ fun SettingsScreen(
             },
             onDismiss = { pending = null },
         )
+    }
+}
+
+@Composable
+private fun ChangelogSection(currentVersionCode: Int) {
+    var expanded by remember { mutableStateOf(false) }
+    val sorted = remember { Changelog.sortedByDescending { it.versionCode } }
+    val latest = sorted.firstOrNull { it.versionCode == currentVersionCode }
+        ?: sorted.firstOrNull()
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (latest != null) {
+            Text(
+                "What's new",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+            )
+            ChangelogEntryCard(entry = latest, current = true)
+        }
+
+        TextButton(
+            onClick = { expanded = !expanded },
+            contentPadding = PaddingValues(horizontal = 0.dp),
+        ) {
+            Text(if (expanded) "Hide full changelog" else "Show full changelog")
+        }
+
+        if (expanded) {
+            sorted
+                .filter { latest == null || it.versionCode != latest.versionCode }
+                .forEach { entry ->
+                    ChangelogEntryCard(entry = entry, current = false)
+                }
+        }
+    }
+}
+
+@Composable
+private fun ChangelogEntryCard(entry: ChangelogEntry, current: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (current)
+                MaterialTheme.colorScheme.primaryContainer
+            else MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                "${entry.versionName} (build ${entry.versionCode})",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            entry.notes.forEach { line ->
+                Text(
+                    "• $line",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
     }
 }
 
