@@ -15,6 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -63,12 +67,15 @@ fun CounterArea(
     count: Int,
     label: String,
     locked: Boolean,
+    interactionsEnabled: Boolean,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
     onLabelChange: (String) -> Unit,
     onPullDown: () -> Unit,
+    onReset: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val gesturesActive = !locked && interactionsEnabled
     val haptics = remember { StitchCounterApp.instance.haptics }
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
@@ -97,15 +104,33 @@ fun CounterArea(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .graphicsLayer { translationX = shake.value }
-            .alpha(if (locked) 0.4f else 1f)
-            .drawWithContent {
-                drawContent()
-                if (flash.value.alpha > 0f) drawRect(flash.value)
-            }
-            .pointerInput(locked) {
-                if (locked) return@pointerInput
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        IconButton(
+            onClick = onReset,
+            enabled = !locked && interactionsEnabled,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(4.dp),
+        ) {
+            Icon(
+                Icons.Default.RestartAlt,
+                contentDescription = "Reset counter",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { translationX = shake.value }
+                .alpha(if (locked) 0.4f else 1f)
+                .drawWithContent {
+                    drawContent()
+                    if (flash.value.alpha > 0f) drawRect(flash.value)
+                }
+                .pointerInput(gesturesActive) {
+                if (!gesturesActive) return@pointerInput
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     val startTime = System.currentTimeMillis()
@@ -200,35 +225,36 @@ fun CounterArea(
                     }
                 }
             },
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(16.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            LabelEditor(
-                label = label,
-                editing = labelEditing,
-                onStartEdit = { labelEditing = true },
-                onCommit = {
-                    onLabelChange(it)
-                    labelEditing = false
-                },
-            )
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = count.toString(),
-                    style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center,
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(16.dp),
+            ) {
+                LabelEditor(
+                    label = label,
+                    editing = labelEditing,
+                    onStartEdit = { labelEditing = true },
+                    onCommit = {
+                        onLabelChange(it)
+                        labelEditing = false
+                    },
                 )
-                if (hintVisible) {
+                Box(contentAlignment = Alignment.Center) {
                     Text(
-                        "−1",
+                        text = count.toString(),
                         style = MaterialTheme.typography.displayLarge,
-                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        textAlign = TextAlign.Center,
                     )
+                    if (hintVisible) {
+                        Text(
+                            "−1",
+                            style = MaterialTheme.typography.displayLarge,
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                        )
+                    }
                 }
             }
         }

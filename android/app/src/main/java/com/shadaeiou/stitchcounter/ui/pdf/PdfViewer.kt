@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,16 +70,10 @@ fun PdfViewer(
     onAddStroke: (List<StrokePoint>) -> Unit,
     onEraseAt: (Float, Float) -> Unit,
     onTapToggleFullscreen: () -> Unit,
+    onRemovePdf: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (pdfPath == null) {
-        Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
-            contentAlignment = Alignment.Center) {
-            Text("No PDF loaded — tap Upload PDF in the toolbar",
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-        }
-        return
-    }
+    if (pdfPath == null) return
 
     val handle = remember(pdfPath) {
         runCatching { PdfHandle(File(pdfPath)) }.getOrNull()
@@ -207,6 +202,10 @@ fun PdfViewer(
                 color = if (invertColors) Color.White else Color.Black)
             IconButton(onClick = { if (safePage < pageCount - 1) onPageChange(safePage + 1) }) {
                 Icon(Icons.Default.ChevronRight, contentDescription = "Next page",
+                    tint = if (invertColors) Color.White else Color.Black)
+            }
+            IconButton(onClick = onRemovePdf) {
+                Icon(Icons.Default.Close, contentDescription = "Remove PDF",
                     tint = if (invertColors) Color.White else Color.Black)
             }
         }

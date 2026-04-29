@@ -58,6 +58,22 @@ fun MainScreen(
         }
     }
 
+    val hasPdf = !project?.pdfPath.isNullOrBlank()
+    val showPdf = hasPdf
+    val showCounter = !showPdf || !pdfFullscreen
+
+    fun resetWithUndo() {
+        vm.reset()
+        scope.launch {
+            val result = snackbar.showSnackbar(
+                message = "Counter reset",
+                actionLabel = "Undo",
+                duration = androidx.compose.material3.SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) vm.undoLast()
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
@@ -66,16 +82,18 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            if (!pdfFullscreen) {
+            if (showCounter) {
                 Box(modifier = Modifier.weight(1f)) {
                     CounterArea(
                         count = project?.count ?: 0,
                         label = project?.label.orEmpty(),
                         locked = locked,
+                        interactionsEnabled = tool == Tool.None,
                         onIncrement = vm::increment,
                         onDecrement = vm::decrement,
                         onLabelChange = vm::setLabel,
                         onPullDown = { historyVisible = true },
+                        onReset = ::resetWithUndo,
                         modifier = Modifier.fillMaxSize(),
                     )
                     HistoryOverlay(
@@ -83,33 +101,31 @@ fun MainScreen(
                         history = history,
                         onUndoLast = { vm.undoLast() },
                         onReset = {
-                            vm.reset()
                             historyVisible = false
-                            scope.launch {
-                                val result = snackbar.showSnackbar(
-                                    message = "Counter reset",
-                                    actionLabel = "Undo",
-                                    duration = androidx.compose.material3.SnackbarDuration.Short,
-                                )
-                                if (result == SnackbarResult.ActionPerformed) vm.undoLast()
-                            }
+                            resetWithUndo()
                         },
                         onDismiss = { historyVisible = false },
                     )
                 }
             }
-            PdfViewer(
-                pdfPath = project?.pdfPath,
-                page = project?.currentPage ?: 0,
-                invertColors = inverted,
-                tool = tool,
-                strokes = strokes,
-                onPageChange = vm::setPage,
-                onAddStroke = { points -> vm.addStroke(points, colorArgb = 0xFFEF4444L, widthPx = 6f) },
-                onEraseAt = { x, y -> vm.eraseAt(x, y, toleranceNorm = 0.025f) },
-                onTapToggleFullscreen = { pdfFullscreen = !pdfFullscreen },
-                modifier = Modifier.weight(1f),
-            )
+            if (showPdf) {
+                PdfViewer(
+                    pdfPath = project?.pdfPath,
+                    page = project?.currentPage ?: 0,
+                    invertColors = inverted,
+                    tool = tool,
+                    strokes = strokes,
+                    onPageChange = vm::setPage,
+                    onAddStroke = { points -> vm.addStroke(points, colorArgb = 0xFFEF4444L, widthPx = 6f) },
+                    onEraseAt = { x, y -> vm.eraseAt(x, y, toleranceNorm = 0.025f) },
+                    onTapToggleFullscreen = { pdfFullscreen = !pdfFullscreen },
+                    onRemovePdf = {
+                        pdfFullscreen = false
+                        vm.setPdfPath(null)
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
             BottomToolbar(
                 locked = locked,
                 inverted = inverted,
