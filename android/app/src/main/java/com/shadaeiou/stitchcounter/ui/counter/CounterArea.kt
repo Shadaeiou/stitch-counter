@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,15 +48,15 @@ import com.shadaeiou.stitchcounter.ui.theme.FlashGreen
 import com.shadaeiou.stitchcounter.ui.theme.FlashRed
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 private const val TAP_DEBOUNCE_MS = 250L
 private const val LONG_PRESS_MS = 400L
 private const val HINT_DELAY_MS = 200L
 private const val MOVE_CANCEL_DP = 10
-private const val PULL_TRIGGER_DP = 80
+private const val PULL_TRIGGER_DP = 60
 private const val FLASH_MS = 150
-private const val SHAKE_MS = 200
 
 @Composable
 fun CounterArea(
@@ -71,6 +72,7 @@ fun CounterArea(
     val haptics = LocalHapticFeedback.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
+    val currentCount by rememberUpdatedState(count)
 
     val flash = remember { Animatable(Color.Transparent) }
     val shake = remember { FloatAnimatable(0f) }
@@ -102,24 +104,26 @@ fun CounterArea(
                 drawContent()
                 if (flash.value.alpha > 0f) drawRect(flash.value)
             }
-            .pointerInput(locked, count) {
+            .pointerInput(locked) {
                 if (locked) return@pointerInput
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     val startTime = System.currentTimeMillis()
                     val startPos = down.position
                     var hintFired = false
-                    var fired = false
+                    var pullTracking = false
+                    var pressFired = false  // tap or long-press already resolved
 
                     while (true) {
-                        val now = System.currentTimeMillis() - startTime
-                        val nextDeadline = when {
-                            !hintFired && now < HINT_DELAY_MS -> HINT_DELAY_MS - now
-                            now < LONG_PRESS_MS -> LONG_PRESS_MS - now
+                        val elapsed = System.currentTimeMillis() - startTime
+                        val nextDeadline: Long = when {
+                            pullTracking || pressFired -> Long.MAX_VALUE
+                            !hintFired && elapsed < HINT_DELAY_MS -> HINT_DELAY_MS - elapsed
+                            elapsed < LONG_PRESS_MS -> LONG_PRESS_MS - elapsed
                             else -> 0L
                         }
 
-                        if (nextDeadline <= 0L) {
+                        if (!pullTracking && !pressFired && nextDeadline <= 0L) {
                             if (!hintFired) {
                                 hintFired = true
                                 hintVisible = true
@@ -127,7 +131,7 @@ fun CounterArea(
                             }
                             // Long-press fires
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (count <= 0) {
+                            if (currentCount <= 0) {
                                 shakeKey++
                             } else {
                                 onDecrement()
@@ -136,64 +140,62 @@ fun CounterArea(
                                     flash.animateTo(Color.Transparent, tween(FLASH_MS))
                                 }
                             }
-                            fired = true
+                            pressFired = true
                             hintVisible = false
-                            // Drain remaining events until lift
-                            while (true) {
-                                val ev = awaitPointerEvent()
-                                if (ev.changes.all { !it.pressed }) break
-                            }
-                            break
+                            // Continue loop waiting for lift; nextDeadline becomes MAX
+                            continue
                         }
 
-                        val event = withTimeoutOrNull(nextDeadline) { awaitPointerEvent() }
-                            ?: continue
+                        val event = if (nextDeadline == Long.MAX_VALUE) awaitPointerEvent()
+                                    else withTimeoutOrNull(nextDeadline) { awaitPointerEvent() }
+                                        ?: continue
 
                         val pointer = event.changes.firstOrNull { it.id == down.id }
-                        if (pointer == null) {
+                        if (pointer == null || !pointer.pressed) {
                             hintVisible = false
-                            break
-                        }
-                        if (!pointer.pressed) {
-                            // Lifted before long-press fired → tap
-                            hintVisible = false
-                            val nowMs = System.currentTimeMillis()
-                            if (!fired && nowMs - lastTapAt >= TAP_DEBOUNCE_MS) {
-                                lastTapAt = nowMs
-                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onIncrement()
-                                scope.launch {
-                                    flash.snapTo(FlashGreen)
-                                    flash.animateTo(Color.Transparent, tween(FLASH_MS))
+                            // Lifted. If neither press nor pull resolved → it's a tap.
+                            if (!pressFired && !pullTracking) {
+                                val nowMs = System.currentTimeMillis()
+                                if (nowMs - lastTapAt >= TAP_DEBOUNCE_MS) {
+                                    lastTapAt = nowMs
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onIncrement()
+                                    scope.launch {
+                                        flash.snapTo(FlashGreen)
+                                        flash.animateTo(Color.Transparent, tween(FLASH_MS))
+                                    }
                                 }
                             }
                             break
                         }
 
+                        if (pressFired) continue  // just waiting for lift now
+
                         val dx = pointer.position.x - startPos.x
                         val dy = pointer.position.y - startPos.y
 
-                        // Pull-down detection (vertical, downward)
+                        // Crossing the pull threshold (downward) at any time → fire pull.
                         if (dy > pullTriggerPx) {
                             hintVisible = false
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onPullDown()
-                            // Drain
-                            while (true) {
-                                val ev = awaitPointerEvent()
-                                if (ev.changes.all { !it.pressed }) break
-                            }
-                            break
+                            pressFired = true  // suppress any further press resolution
+                            pullTracking = true
+                            continue
                         }
 
                         val dist = sqrt(dx * dx + dy * dy)
-                        if (dist > moveCancelPx) {
-                            hintVisible = false
-                            // Movement cancels long-press AND tap (matches design intent)
-                            while (true) {
-                                val ev = awaitPointerEvent()
-                                if (ev.changes.all { !it.pressed }) break
+                        if (!pullTracking && dist > moveCancelPx) {
+                            val isPullTrajectory = dy > 0f && dy >= abs(dx)
+                            if (isPullTrajectory) {
+                                // Allow continued downward tracking toward the pull threshold.
+                                pullTracking = true
+                                hintVisible = false
+                            } else {
+                                // Movement in a non-pull direction → cancel everything.
+                                hintVisible = false
+                                pressFired = true  // suppress tap on lift
                             }
-                            break
                         }
                     }
                 }
