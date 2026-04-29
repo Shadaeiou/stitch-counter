@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -134,11 +133,9 @@ fun PdfViewer(
     // Active stroke being drawn, in normalized 0..1 PDF coords (un-transformed).
     var activeStroke by remember { mutableStateOf<List<StrokePoint>>(emptyList()) }
 
-    Column(modifier = modifier.fillMaxSize()) {
     Box(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth()
+        modifier = modifier
+            .fillMaxSize()
             .clipToBounds()
             .background(if (invertColors) Color.Black else Color.White),
     ) {
@@ -235,8 +232,10 @@ fun PdfViewer(
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = { if (safePage > 0) onPageChange(safePage - 1) }) {
@@ -249,17 +248,25 @@ fun PdfViewer(
                 Icon(Icons.Default.ChevronRight, contentDescription = "Next page",
                     tint = if (invertColors) Color.White else Color.Black)
             }
-            IconButton(
-                onClick = onRemovePdf,
-                modifier = Modifier.border(
-                    BorderStroke(1.dp, (if (invertColors) Color.White else Color.Black).copy(alpha = 0.5f)),
-                    CircleShape,
-                ),
-            ) {
-                Icon(Icons.Default.Close, contentDescription = "Remove PDF",
-                    tint = if (invertColors) Color.White else Color.Black)
-            }
         }
+
+        // Overlay toolbar in the upper-right corner of the PDF area.
+        // PdfViewer is only mounted when a PDF is loaded and showing, so
+        // visibility (hide-when-no-pdf, hide-when-pdf-hidden) is handled
+        // implicitly by callers.
+        PdfToolbar(
+            activeTool = tool,
+            inverted = invertColors,
+            onUploadPdf = onUploadPdf,
+            onSelectPen = onSelectPen,
+            onLongPressPen = onLongPressPen,
+            onSelectEraser = onSelectEraser,
+            onToggleInvert = onToggleInvert,
+            onRemovePdf = onRemovePdf,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(8.dp),
+        )
 
         if (tool == Tool.Pen) {
             UndoRedoBar(
@@ -270,35 +277,22 @@ fun PdfViewer(
                 onDarkBackground = invertColors,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 56.dp, end = 12.dp),
+                    // Sits below the PdfToolbar overlay (which is ~48dp tall
+                    // plus its 8dp padding).
+                    .padding(top = 72.dp, end = 12.dp),
             )
         } else if (tool == Tool.Eraser) {
-            Box(
+            Text(
+                "Eraser",
+                color = if (invertColors) Color.White else Color.Black,
+                style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                contentAlignment = Alignment.TopEnd,
-            ) {
-                Text(
-                    "Eraser",
-                    color = if (invertColors) Color.White else Color.Black,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                )
-            }
+                    .align(Alignment.TopEnd)
+                    .padding(top = 72.dp, end = 16.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
         }
-    }
-    PdfToolbar(
-        activeTool = tool,
-        inverted = invertColors,
-        onUploadPdf = onUploadPdf,
-        onSelectPen = onSelectPen,
-        onLongPressPen = onLongPressPen,
-        onSelectEraser = onSelectEraser,
-        onToggleInvert = onToggleInvert,
-    )
     }
 }
 
@@ -312,18 +306,31 @@ private fun PdfToolbar(
     onLongPressPen: () -> Unit,
     onSelectEraser: () -> Unit,
     onToggleInvert: () -> Unit,
+    onRemovePdf: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val barBg =
+        if (inverted) Color.Black.copy(alpha = 0.6f)
+        else Color.White.copy(alpha = 0.85f)
+    val barBorder =
+        if (inverted) Color.White.copy(alpha = 0.4f)
+        else Color.Black.copy(alpha = 0.4f)
+    val activeTint = MaterialTheme.colorScheme.primary
+    val idleTint = if (inverted) Color.White else Color.Black
+
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(barBg)
+            .border(BorderStroke(1.dp, barBorder), RoundedCornerShape(20.dp)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onUploadPdf) {
-            Icon(Icons.Default.UploadFile, contentDescription = "Upload PDF")
+            Icon(
+                Icons.Default.UploadFile,
+                contentDescription = "Upload PDF",
+                tint = idleTint,
+            )
         }
         Box(
             modifier = Modifier
@@ -337,27 +344,28 @@ private fun PdfToolbar(
             Icon(
                 Icons.Default.Edit,
                 contentDescription = "Pen (long-press for options)",
-                tint = if (activeTool == Tool.Pen)
-                    MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface,
+                tint = if (activeTool == Tool.Pen) activeTint else idleTint,
             )
         }
         IconButton(onClick = onSelectEraser) {
             Icon(
                 Icons.Default.AutoFixHigh,
                 contentDescription = "Eraser",
-                tint = if (activeTool == Tool.Eraser)
-                    MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface,
+                tint = if (activeTool == Tool.Eraser) activeTint else idleTint,
             )
         }
         IconButton(onClick = onToggleInvert) {
             Icon(
                 Icons.Default.InvertColors,
                 contentDescription = "Invert colors",
-                tint = if (inverted)
-                    MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface,
+                tint = if (inverted) activeTint else idleTint,
+            )
+        }
+        IconButton(onClick = onRemovePdf) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Remove PDF",
+                tint = idleTint,
             )
         }
     }

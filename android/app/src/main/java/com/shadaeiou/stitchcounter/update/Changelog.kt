@@ -13,6 +13,16 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 19,
+        versionName = "0.1.19",
+        notes = listOf(
+            "PDF toolbar moved into the upper-right corner of the PDF area as a translucent overlay over the PDF.",
+            "Toolbar now contains Upload PDF, Pen (long-press for color/thickness), Eraser, Invert colors, and Remove PDF.",
+            "The Remove PDF button is gone from the page-nav row at the top.",
+            "Toolbar is hidden whenever the PDF pane itself is hidden (no PDF loaded, or hidden via Hide PDF on the main toolbar).",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 18,
         versionName = "0.1.18",
         notes = listOf(
