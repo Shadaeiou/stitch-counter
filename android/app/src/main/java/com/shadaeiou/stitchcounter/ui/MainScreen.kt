@@ -123,7 +123,6 @@ fun MainScreen(
                     Box(modifier = Modifier.weight(counterWeight).fillMaxWidth()) {
                         CounterArea(
                             count = project?.count ?: 0,
-                            label = project?.label.orEmpty(),
                             locked = locked,
                             interactionsEnabled = tool == Tool.None,
                             backgroundArgb = counterBackgroundArgb,
@@ -131,7 +130,6 @@ fun MainScreen(
                             pinnedNotes = pinnedNotes,
                             onIncrement = vm::increment,
                             onDecrement = vm::decrement,
-                            onLabelChange = vm::setLabel,
                             onPullDown = { historyVisible = true },
                             onReset = ::resetWithUndo,
                             onEditPattern = { patternEditorVisible = true },

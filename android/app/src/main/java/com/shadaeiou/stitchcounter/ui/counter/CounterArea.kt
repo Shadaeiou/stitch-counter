@@ -1,5 +1,7 @@
 package com.shadaeiou.stitchcounter.ui.counter
 
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.view.SoundEffectConstants
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.core.Animatable as FloatAnimatable
@@ -8,7 +10,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -20,18 +21,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -46,23 +44,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.shadaeiou.stitchcounter.StitchCounterApp
 import com.shadaeiou.stitchcounter.data.notes.NoteItem
-import com.shadaeiou.stitchcounter.ui.theme.FlashGreen
 import com.shadaeiou.stitchcounter.ui.theme.FlashRed
+import com.shadaeiou.stitchcounter.ui.theme.FlashWhite
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
@@ -74,11 +69,11 @@ private const val HINT_DELAY_MS = 200L
 private const val MOVE_CANCEL_DP = 10
 private const val PULL_TRIGGER_DP = 60
 private const val FLASH_MS = 600
+private const val PINNED_NOTE_MAX_CHARS = 80
 
 @Composable
 fun CounterArea(
     count: Int,
-    label: String,
     locked: Boolean,
     interactionsEnabled: Boolean,
     backgroundArgb: Long,
@@ -86,7 +81,6 @@ fun CounterArea(
     pinnedNotes: List<NoteItem>,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
-    onLabelChange: (String) -> Unit,
     onPullDown: () -> Unit,
     onReset: () -> Unit,
     onEditPattern: () -> Unit,
@@ -99,10 +93,19 @@ fun CounterArea(
     val scope = rememberCoroutineScope()
     val currentCount by rememberUpdatedState(count)
 
+    // ToneGenerator plays a short tone independent of the system "touch
+    // sounds" setting, so the click is audible regardless of whether the
+    // user has system touch feedback enabled.
+    val toneGen = remember {
+        runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 70) }.getOrNull()
+    }
+    DisposableEffect(toneGen) {
+        onDispose { toneGen?.release() }
+    }
+
     val flash = remember { Animatable(Color.Transparent) }
     val shake = remember { FloatAnimatable(0f) }
     var hintVisible by remember { mutableStateOf(false) }
-    var labelEditing by remember { mutableStateOf(false) }
     var lastTapAt by remember { mutableLongStateOf(0L) }
     var shakeKey by remember { mutableIntStateOf(0) }
 
@@ -187,10 +190,11 @@ fun CounterArea(
                                     if (nowMs - lastTapAt >= TAP_DEBOUNCE_MS) {
                                         lastTapAt = nowMs
                                         haptics.light()
+                                        toneGen?.startTone(ToneGenerator.TONE_PROP_BEEP, 40)
                                         view.playSoundEffect(SoundEffectConstants.CLICK)
                                         onIncrement()
                                         scope.launch {
-                                            flash.snapTo(FlashGreen)
+                                            flash.snapTo(FlashWhite)
                                             flash.animateTo(Color.Transparent, tween(FLASH_MS))
                                         }
                                     }
@@ -228,45 +232,30 @@ fun CounterArea(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(16.dp),
-            ) {
-                LabelEditor(
-                    label = label,
-                    editing = labelEditing,
-                    onStartEdit = { if (!locked) labelEditing = true },
-                    onCommit = {
-                        if (it != label) onLabelChange(it)
-                        labelEditing = false
-                    },
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(contentAlignment = Alignment.Center) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = count.toString(),
+                        style = MaterialTheme.typography.displayLarge,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                    )
+                    if (hintVisible) {
                         Text(
-                            text = count.toString(),
+                            "−1",
                             style = MaterialTheme.typography.displayLarge,
-                            color = Color.White,
-                            textAlign = TextAlign.Center,
-                        )
-                        if (hintVisible) {
-                            Text(
-                                "−1",
-                                style = MaterialTheme.typography.displayLarge,
-                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
-                            )
-                        }
-                    }
-                    if (patternLetter != null) {
-                        Text(
-                            text = patternLetter.toString(),
-                            style = MaterialTheme.typography.displayMedium,
-                            color = if (patternLetter == 'K') Color(0xFF4ADE80) else Color(0xFFF87171),
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 24.dp),
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
                         )
                     }
+                }
+                if (patternLetter != null) {
+                    Text(
+                        text = patternLetter.toString(),
+                        style = MaterialTheme.typography.displayMedium,
+                        color = if (patternLetter == 'K') Color(0xFF4ADE80) else Color(0xFFF87171),
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 24.dp),
+                    )
                 }
             }
         }
@@ -282,16 +271,14 @@ fun CounterArea(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 pinnedNotes.take(3).forEach { note ->
-                    Text(
-                        note.text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
+                    val capped = capForMain(note.text, PINNED_NOTE_MAX_CHARS)
+                    AutoSizeNoteText(
+                        text = capped,
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.Black.copy(alpha = 0.45f))
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .fillMaxWidth(),
                     )
                 }
             }
@@ -316,9 +303,7 @@ fun CounterArea(
             )
         }
 
-        // Reset button (top-end). Declared last so it sits above the gesture
-        // box; clickable consumes the down so the gesture box's
-        // awaitFirstDown(requireUnconsumed=true) skips it.
+        // Reset button (top-end).
         IconButton(
             onClick = onReset,
             enabled = !locked && interactionsEnabled,
@@ -339,57 +324,38 @@ fun CounterArea(
     }
 }
 
+// Shrinks fontSize until the text fits within its width/height constraints,
+// so a long pinned note becomes readable without overflowing the top ribbon.
 @Composable
-private fun LabelEditor(
-    label: String,
-    editing: Boolean,
-    onStartEdit: () -> Unit,
-    onCommit: (String) -> Unit,
+private fun AutoSizeNoteText(
+    text: String,
+    modifier: Modifier = Modifier,
+    maxFontSize: TextUnit = 28.sp,
+    minFontSize: TextUnit = 12.sp,
 ) {
-    if (editing) {
-        var draft by remember(label) { mutableStateOf(label) }
-        val currentDraft = rememberUpdatedState(draft)
-        val commit = rememberUpdatedState(onCommit)
-        val focusRequester = remember { FocusRequester() }
-        LaunchedEffect(Unit) { focusRequester.requestFocus() }
-        BasicTextField(
-            value = draft,
-            onValueChange = { draft = it },
-            singleLine = true,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            textStyle = LocalTextStyle.current.copy(
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                fontSize = MaterialTheme.typography.titleLarge.fontSize,
-            ),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { commit.value(currentDraft.value.trim()) }),
-            modifier = Modifier
-                .padding(bottom = 16.dp)
-                .focusRequester(focusRequester)
-                .onFocusChanged { state ->
-                    if (!state.isFocused) {
-                        // Field lost focus (user tapped away or navigated to
-                        // another screen). Commit and exit edit mode so the
-                        // keyboard doesn't keep popping back up later.
-                        commit.value(currentDraft.value.trim())
-                    }
-                },
-        )
-    } else {
-        val display = label.ifBlank { "Tap to set label" }
-        val color =
-            if (label.isBlank()) Color.White.copy(alpha = 0.5f)
-            else Color.White
-        Text(
-            text = display,
-            style = MaterialTheme.typography.titleLarge,
-            color = color,
-            modifier = Modifier
-                .padding(bottom = 16.dp)
-                .clickable(onClick = onStartEdit),
-        )
-    }
+    var fontSize by remember(text) { mutableStateOf(maxFontSize) }
+    Text(
+        text = text,
+        modifier = modifier,
+        color = Color.White,
+        fontSize = fontSize,
+        textAlign = TextAlign.Center,
+        maxLines = 2,
+        softWrap = true,
+        onTextLayout = { result ->
+            if ((result.didOverflowWidth || result.didOverflowHeight) &&
+                fontSize.value > minFontSize.value
+            ) {
+                val next = (fontSize.value - 1f).coerceAtLeast(minFontSize.value).sp
+                if (next.value < fontSize.value) fontSize = next
+            }
+        },
+    )
+}
+
+private fun capForMain(text: String, maxChars: Int): String {
+    if (text.length <= maxChars) return text
+    return text.take(maxChars - 1).trimEnd() + "…"
 }
 
 private fun stitchLetterFor(count: Int, pattern: String): Char? {
