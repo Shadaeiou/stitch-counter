@@ -43,6 +43,13 @@ class CounterViewModel(
     private val _penWidthPx = MutableStateFlow(6f)
     val penWidthPx: StateFlow<Float> = _penWidthPx.asStateFlow()
 
+    // Per-page redo stack for stroke undo/redo. Cleared when the page,
+    // PDF, or strokes are mutated outside the undo/redo flow.
+    private val _redoStack = MutableStateFlow<List<Stroke>>(emptyList())
+    val canRedo: StateFlow<Boolean> = _redoStack
+        .map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     val history: StateFlow<List<HistoryEntry>> = _project
         .flatMapLatest { p ->
             if (p == null) flow { emit(emptyList<HistoryEntry>()) }
@@ -94,12 +101,14 @@ class CounterViewModel(
 
     fun setPdfPath(path: String?) = viewModelScope.launch {
         val p = _project.value ?: return@launch
+        _redoStack.value = emptyList()
         _project.value = repository.setPdf(p, path)
     }
 
     fun setPage(page: Int) = viewModelScope.launch {
         val p = _project.value ?: return@launch
         if (p.currentPage == page) return@launch
+        _redoStack.value = emptyList()
         _project.value = repository.setPage(p, page)
     }
 
@@ -117,12 +126,13 @@ class CounterViewModel(
     }
 
     fun setPenColor(argb: Long) { _penColorArgb.value = argb }
-    fun setPenWidth(px: Float) { _penWidthPx.value = px.coerceIn(1f, 24f) }
+    fun setPenWidth(px: Float) { _penWidthPx.value = px.coerceIn(1f, 36f) }
 
     fun addStroke(points: List<StrokePoint>, colorArgb: Long, widthPx: Float) = viewModelScope.launch {
         if (points.size < 2) return@launch
         val p = _project.value ?: return@launch
         val current = strokes.value
+        _redoStack.value = emptyList()
         repository.saveStrokes(
             p.id, p.currentPage,
             current + Stroke(points = points, colorArgb = colorArgb, widthPx = widthPx),
@@ -138,8 +148,27 @@ class CounterViewModel(
             stroke.points.none { pt -> (pt.x - x).pow(2) + (pt.y - y).pow(2) < tol2 }
         }
         if (filtered.size != current.size) {
+            _redoStack.value = emptyList()
             repository.saveStrokes(p.id, p.currentPage, filtered)
         }
+    }
+
+    fun undoLastStroke() = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        val current = strokes.value
+        if (current.isEmpty()) return@launch
+        val last = current.last()
+        _redoStack.value = _redoStack.value + last
+        repository.saveStrokes(p.id, p.currentPage, current.dropLast(1))
+    }
+
+    fun redoLastStroke() = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        val redo = _redoStack.value
+        if (redo.isEmpty()) return@launch
+        val toRestore = redo.last()
+        _redoStack.value = redo.dropLast(1)
+        repository.saveStrokes(p.id, p.currentPage, strokes.value + toRestore)
     }
 
     @Suppress("UNUSED_PARAMETER")

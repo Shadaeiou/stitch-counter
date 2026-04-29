@@ -23,11 +23,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shadaeiou.stitchcounter.ui.counter.CounterArea
 import com.shadaeiou.stitchcounter.ui.counter.HistoryOverlay
 import com.shadaeiou.stitchcounter.ui.notes.NotesSheet
+import androidx.compose.ui.Alignment
 import com.shadaeiou.stitchcounter.ui.pdf.PdfViewer
+import com.shadaeiou.stitchcounter.ui.pdf.PenSettingsPanel
 import com.shadaeiou.stitchcounter.ui.pdf.copyPdfToInternal
 import com.shadaeiou.stitchcounter.ui.toolbar.BottomToolbar
 import com.shadaeiou.stitchcounter.viewmodel.CounterViewModel
@@ -47,6 +50,7 @@ fun MainScreen(
     val strokes by vm.strokes.collectAsStateWithLifecycle()
     val penColor by vm.penColorArgb.collectAsStateWithLifecycle()
     val penWidth by vm.penWidthPx.collectAsStateWithLifecycle()
+    val canRedoStroke by vm.canRedo.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -55,6 +59,7 @@ fun MainScreen(
     var pdfFullscreen by remember { mutableStateOf(false) }
     var notesVisible by remember { mutableStateOf(false) }
     var confirmRemovePdf by remember { mutableStateOf(false) }
+    var penPanelVisible by remember { mutableStateOf(false) }
 
     val pdfPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -131,8 +136,11 @@ fun MainScreen(
                     onEraseAt = { x, y -> vm.eraseAt(x, y, toleranceNorm = 0.025f) },
                     onTapToggleFullscreen = { pdfFullscreen = !pdfFullscreen },
                     onRemovePdf = { confirmRemovePdf = true },
-                    onChangePenColor = vm::setPenColor,
-                    onChangePenWidth = vm::setPenWidth,
+                    canUndoStroke = strokes.isNotEmpty(),
+                    canRedoStroke = canRedoStroke,
+                    onUndoStroke = vm::undoLastStroke,
+                    onRedoStroke = vm::redoLastStroke,
+                    onPenDrawStart = { penPanelVisible = false },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -141,13 +149,43 @@ fun MainScreen(
                 inverted = inverted,
                 activeTool = tool,
                 onUploadPdf = { pdfPicker.launch(arrayOf("application/pdf")) },
-                onSelectPen = { vm.selectTool(Tool.Pen) },
-                onSelectEraser = { vm.selectTool(Tool.Eraser) },
+                onSelectPen = {
+                    penPanelVisible = false
+                    vm.selectTool(Tool.Pen)
+                },
+                onLongPressPen = {
+                    if (tool != Tool.Pen) vm.selectTool(Tool.Pen)
+                    penPanelVisible = true
+                },
+                onSelectEraser = {
+                    penPanelVisible = false
+                    vm.selectTool(Tool.Eraser)
+                },
                 onOpenNotes = { notesVisible = true },
                 onToggleInvert = { inverted = !inverted },
                 onToggleLock = vm::toggleLock,
                 onOpenSettings = onOpenSettings,
             )
+        }
+
+        if (penPanelVisible && tool == Tool.Pen) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                PenSettingsPanel(
+                    selectedColorArgb = penColor,
+                    widthPx = penWidth,
+                    onColorChange = vm::setPenColor,
+                    onWidthChange = vm::setPenWidth,
+                    onDarkBackground = true,
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 64.dp),
+                )
+            }
         }
     }
 

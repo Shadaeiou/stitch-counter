@@ -70,11 +70,15 @@ fun HistoryOverlay(
                         Text(
                             "History",
                             style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(start = 4.dp),
+                            modifier = Modifier
+                                .padding(start = 4.dp)
+                                .weight(1f),
                         )
-                        Spacer(Modifier.fillMaxWidth().padding(start = 4.dp))
                         IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = "Close")
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Close history",
+                            )
                         }
                     }
                     Row(

@@ -28,6 +28,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
@@ -83,8 +85,11 @@ fun PdfViewer(
     onEraseAt: (Float, Float) -> Unit,
     onTapToggleFullscreen: () -> Unit,
     onRemovePdf: () -> Unit,
-    onChangePenColor: (Long) -> Unit,
-    onChangePenWidth: (Float) -> Unit,
+    canUndoStroke: Boolean,
+    canRedoStroke: Boolean,
+    onUndoStroke: () -> Unit,
+    onRedoStroke: () -> Unit,
+    onPenDrawStart: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (pdfPath == null) return
@@ -168,6 +173,7 @@ fun PdfViewer(
                         Tool.Pen -> {
                             awaitEachGesture {
                                 val down = awaitFirstDown(requireUnconsumed = true)
+                                onPenDrawStart()
                                 val w = size.width.toFloat().coerceAtLeast(1f)
                                 val h = size.height.toFloat().coerceAtLeast(1f)
                                 val pts = mutableListOf<StrokePoint>()
@@ -241,15 +247,15 @@ fun PdfViewer(
         }
 
         if (tool == Tool.Pen) {
-            PenSettingsPanel(
-                selectedColorArgb = penColorArgb,
-                widthPx = penWidthPx,
-                onColorChange = onChangePenColor,
-                onWidthChange = onChangePenWidth,
+            UndoRedoBar(
+                canUndo = canUndoStroke,
+                canRedo = canRedoStroke,
+                onUndo = onUndoStroke,
+                onRedo = onRedoStroke,
                 onDarkBackground = invertColors,
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 56.dp, start = 12.dp, end = 12.dp),
+                    .align(Alignment.TopEnd)
+                    .padding(top = 56.dp, end = 12.dp),
             )
         } else if (tool == Tool.Eraser) {
             Box(
@@ -272,7 +278,48 @@ fun PdfViewer(
 }
 
 @Composable
-private fun PenSettingsPanel(
+private fun UndoRedoBar(
+    canUndo: Boolean,
+    canRedo: Boolean,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    onDarkBackground: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val barBg =
+        if (onDarkBackground) Color.Black.copy(alpha = 0.6f)
+        else Color.White.copy(alpha = 0.85f)
+    val barBorder =
+        if (onDarkBackground) Color.White.copy(alpha = 0.4f)
+        else Color.Black.copy(alpha = 0.4f)
+    val tint = if (onDarkBackground) Color.White else Color.Black
+
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(barBg)
+            .border(BorderStroke(1.dp, barBorder), RoundedCornerShape(20.dp)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onUndo, enabled = canUndo) {
+            Icon(
+                Icons.AutoMirrored.Filled.Undo,
+                contentDescription = "Undo last stroke",
+                tint = if (canUndo) tint else tint.copy(alpha = 0.3f),
+            )
+        }
+        IconButton(onClick = onRedo, enabled = canRedo) {
+            Icon(
+                Icons.AutoMirrored.Filled.Redo,
+                contentDescription = "Redo last undone stroke",
+                tint = if (canRedo) tint else tint.copy(alpha = 0.3f),
+            )
+        }
+    }
+}
+
+@Composable
+fun PenSettingsPanel(
     selectedColorArgb: Long,
     widthPx: Float,
     onColorChange: (Long) -> Unit,
@@ -316,7 +363,7 @@ private fun PenSettingsPanel(
         Slider(
             value = widthPx,
             onValueChange = onWidthChange,
-            valueRange = 1f..24f,
+            valueRange = 1f..36f,
             modifier = Modifier.width(140.dp),
         )
         Text(

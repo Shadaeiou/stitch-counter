@@ -1,11 +1,14 @@
 package com.shadaeiou.stitchcounter.ui.toolbar
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Edit
@@ -24,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.shadaeiou.stitchcounter.viewmodel.Tool
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun BottomToolbar(
     locked: Boolean,
@@ -31,6 +35,7 @@ fun BottomToolbar(
     activeTool: Tool,
     onUploadPdf: () -> Unit,
     onSelectPen: () -> Unit,
+    onLongPressPen: () -> Unit,
     onSelectEraser: () -> Unit,
     onOpenNotes: () -> Unit,
     onToggleInvert: () -> Unit,
@@ -50,10 +55,18 @@ fun BottomToolbar(
         IconButton(onClick = onUploadPdf) {
             Icon(Icons.Default.UploadFile, contentDescription = "Upload PDF")
         }
-        IconButton(onClick = onSelectPen) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .combinedClickable(
+                    onClick = onSelectPen,
+                    onLongClick = onLongPressPen,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
                 Icons.Default.Edit,
-                contentDescription = "Pen",
+                contentDescription = "Pen (long-press for options)",
                 tint = if (activeTool == Tool.Pen)
                     MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurface,
