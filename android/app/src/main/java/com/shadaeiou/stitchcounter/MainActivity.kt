@@ -125,6 +125,7 @@ private fun AppRoot(activityVm: CounterViewModel) {
                 onAdd = activityVm::addNote,
                 onTogglePin = activityVm::togglePin,
                 onDelete = activityVm::deleteNote,
+                onUpdate = activityVm::updateNote,
             )
         }
         Screen.Settings -> {

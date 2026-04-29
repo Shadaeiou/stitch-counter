@@ -13,6 +13,13 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 17,
+        versionName = "0.1.17",
+        notes = listOf(
+            "Notes screen: tap a note to edit its text in a dialog. Long-press still pins / unpins.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 16,
         versionName = "0.1.16",
         notes = listOf(

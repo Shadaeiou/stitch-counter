@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -29,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -49,8 +51,10 @@ fun NotesScreen(
     onAdd: (String) -> Unit,
     onTogglePin: (String) -> Unit,
     onDelete: (String) -> Unit,
+    onUpdate: (String, String) -> Unit,
 ) {
     var draft by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf<NoteItem?>(null) }
 
     Scaffold(
         topBar = {
@@ -93,7 +97,7 @@ fun NotesScreen(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "Long-press a note to pin / unpin it on the counter.",
+                "Tap a note to edit, long-press to pin / unpin.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             )
@@ -118,6 +122,7 @@ fun NotesScreen(
                     items(ordered, key = { it.id }) { note ->
                         NoteCard(
                             note = note,
+                            onEdit = { editing = note },
                             onTogglePin = { onTogglePin(note.id) },
                             onDelete = { onDelete(note.id) },
                         )
@@ -126,12 +131,56 @@ fun NotesScreen(
             }
         }
     }
+
+    editing?.let { note ->
+        EditNoteDialog(
+            initialText = note.text,
+            onDismiss = { editing = null },
+            onSave = { text ->
+                onUpdate(note.id, text)
+                editing = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun EditNoteDialog(
+    initialText: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    var draft by remember(initialText) { mutableStateOf(initialText) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit note") },
+        text = {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 140.dp),
+                placeholder = { Text("Note text") },
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(draft) },
+                enabled = draft.isNotBlank() && draft != initialText,
+            ) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NoteCard(
     note: NoteItem,
+    onEdit: () -> Unit,
     onTogglePin: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -139,7 +188,7 @@ private fun NoteCard(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = {},
+                onClick = onEdit,
                 onLongClick = onTogglePin,
             ),
         shape = RoundedCornerShape(12.dp),
