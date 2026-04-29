@@ -94,10 +94,10 @@ fun CounterArea(
     val currentCount by rememberUpdatedState(count)
 
     // ToneGenerator plays a short tone independent of the system "touch
-    // sounds" setting, so the click is audible regardless of whether the
-    // user has system touch feedback enabled.
+    // sounds" setting. Volume is maxed (100/100) and we use a loud PBX
+    // click tone so the click is audible even over media playback.
     val toneGen = remember {
-        runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 70) }.getOrNull()
+        runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 100) }.getOrNull()
     }
     DisposableEffect(toneGen) {
         onDispose { toneGen?.release() }
@@ -190,7 +190,7 @@ fun CounterArea(
                                     if (nowMs - lastTapAt >= TAP_DEBOUNCE_MS) {
                                         lastTapAt = nowMs
                                         haptics.light()
-                                        toneGen?.startTone(ToneGenerator.TONE_PROP_BEEP, 40)
+                                        toneGen?.startTone(ToneGenerator.TONE_CDMA_HIGH_PBX_L, 80)
                                         view.playSoundEffect(SoundEffectConstants.CLICK)
                                         onIncrement()
                                         scope.launch {

@@ -13,6 +13,13 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 16,
+        versionName = "0.1.16",
+        notes = listOf(
+            "Counter click is louder and more audible: ToneGenerator volume maxed (100/100) and switched to a louder PBX click tone with a longer duration so it carries over music playing in another app.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 15,
         versionName = "0.1.15",
         notes = listOf(
