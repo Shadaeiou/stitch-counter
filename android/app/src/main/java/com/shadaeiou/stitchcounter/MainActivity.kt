@@ -2,7 +2,9 @@ package com.shadaeiou.stitchcounter
 
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -23,9 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import com.shadaeiou.stitchcounter.ui.MainScreen
 import com.shadaeiou.stitchcounter.ui.settings.SettingsScreen
 import com.shadaeiou.stitchcounter.ui.theme.StitchCounterTheme
@@ -41,13 +40,14 @@ private const val REPO_NAME = "stitch-counter"
 
 class MainActivity : ComponentActivity() {
 
-    private val counterVm: CounterViewModel by viewModels { CounterViewModel.Factory() }
+    val counterVm: CounterViewModel by viewModels { CounterViewModel.Factory() }
 
     @Volatile private var volumeKeysEnabled: Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         lifecycleScope.launch {
             StitchCounterApp.instance.prefs.volumeKeysFlow.collect { volumeKeysEnabled = it }
@@ -56,23 +56,29 @@ class MainActivity : ComponentActivity() {
         setContent {
             StitchCounterTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AppRoot()
+                    AppRoot(activityVm = counterVm)
                 }
             }
         }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (volumeKeysEnabled && event.action == KeyEvent.ACTION_DOWN) {
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_VOLUME_UP -> { counterVm.increment(); return true }
-                KeyEvent.KEYCODE_VOLUME_DOWN -> { counterVm.decrement(); return true }
-            }
-        }
-        // Also swallow ACTION_UP so the system doesn't change media volume
-        if (volumeKeysEnabled && event.action == KeyEvent.ACTION_UP) {
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN -> return true
+        if (volumeKeysEnabled) {
+            val isVolumeKey = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP
+                || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+            if (isVolumeKey) {
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    val haptics = StitchCounterApp.instance.haptics
+                    when (event.keyCode) {
+                        KeyEvent.KEYCODE_VOLUME_UP -> {
+                            counterVm.increment(); haptics.light()
+                        }
+                        KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                            counterVm.decrement(); haptics.medium()
+                        }
+                    }
+                }
+                return true  // always swallow so system volume doesn't change
             }
         }
         return super.dispatchKeyEvent(event)
@@ -80,8 +86,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AppRoot() {
-    val nav = rememberNavController()
+private fun AppRoot(activityVm: CounterViewModel) {
     val app = StitchCounterApp.instance
     val prefs = app.prefs
 
@@ -90,6 +95,7 @@ private fun AppRoot() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var pending by remember { mutableStateOf<UpdateInfo?>(null) }
+    var screen by remember { mutableStateOf(Screen.Main) }
 
     LaunchedEffect(autoUpdate) {
         if (!autoUpdate) return@LaunchedEffect
@@ -98,17 +104,19 @@ private fun AppRoot() {
         if (result is UpdateCheckResult.Available) pending = result.info
     }
 
-    NavHost(navController = nav, startDestination = "main") {
-        composable("main") {
-            MainScreen(onOpenSettings = { nav.navigate("settings") })
-        }
-        composable("settings") {
+    when (screen) {
+        Screen.Main -> MainScreen(
+            vm = activityVm,
+            onOpenSettings = { screen = Screen.Settings },
+        )
+        Screen.Settings -> {
+            BackHandler { screen = Screen.Main }
             SettingsScreen(
                 autoUpdate = autoUpdate,
                 volumeKeys = volumeKeys,
                 onAutoUpdateChange = { v -> scope.launch { prefs.setAutoUpdate(v) } },
                 onVolumeKeysChange = { v -> scope.launch { prefs.setVolumeKeys(v) } },
-                onBack = { nav.popBackStack() },
+                onBack = { screen = Screen.Main },
                 repoOwner = REPO_OWNER,
                 repoName = REPO_NAME,
             )
@@ -142,3 +150,5 @@ private fun AppRoot() {
         )
     }
 }
+
+private enum class Screen { Main, Settings }

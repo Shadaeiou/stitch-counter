@@ -9,5 +9,5 @@ val Accent = Color(0xFF22C55E)
 val AccentRed = Color(0xFFEF4444)
 val Muted = Color(0xFF6B7280)
 
-val FlashGreen = Color(0x3322C55E)
-val FlashRed = Color(0x33EF4444)
+val FlashGreen = Color(0x6622C55E)
+val FlashRed = Color(0x66EF4444)

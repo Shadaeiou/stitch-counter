@@ -36,14 +36,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.shadaeiou.stitchcounter.StitchCounterApp
 import com.shadaeiou.stitchcounter.ui.theme.FlashGreen
 import com.shadaeiou.stitchcounter.ui.theme.FlashRed
 import kotlinx.coroutines.launch
@@ -56,7 +56,7 @@ private const val LONG_PRESS_MS = 400L
 private const val HINT_DELAY_MS = 200L
 private const val MOVE_CANCEL_DP = 10
 private const val PULL_TRIGGER_DP = 60
-private const val FLASH_MS = 150
+private const val FLASH_MS = 220
 
 @Composable
 fun CounterArea(
@@ -69,7 +69,7 @@ fun CounterArea(
     onPullDown: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val haptics = LocalHapticFeedback.current
+    val haptics = remember { StitchCounterApp.instance.haptics }
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val currentCount by rememberUpdatedState(count)
@@ -130,7 +130,7 @@ fun CounterArea(
                                 continue
                             }
                             // Long-press fires
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            haptics.heavy()
                             if (currentCount <= 0) {
                                 shakeKey++
                             } else {
@@ -158,7 +158,7 @@ fun CounterArea(
                                 val nowMs = System.currentTimeMillis()
                                 if (nowMs - lastTapAt >= TAP_DEBOUNCE_MS) {
                                     lastTapAt = nowMs
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    haptics.light()
                                     onIncrement()
                                     scope.launch {
                                         flash.snapTo(FlashGreen)
@@ -177,7 +177,7 @@ fun CounterArea(
                         // Crossing the pull threshold (downward) at any time → fire pull.
                         if (dy > pullTriggerPx) {
                             hintVisible = false
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            haptics.pull()
                             onPullDown()
                             pressFired = true  // suppress any further press resolution
                             pullTracking = true
