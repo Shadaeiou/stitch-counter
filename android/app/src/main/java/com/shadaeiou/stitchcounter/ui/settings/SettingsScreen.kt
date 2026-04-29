@@ -85,7 +85,7 @@ fun SettingsScreen(
             )
             SettingRow(
                 title = "Volume keys count",
-                description = "Up = +1, Down = -1 (Phase 2)",
+                description = "Up = +1, Down = -1",
                 checked = volumeKeys,
                 onCheckedChange = onVolumeKeysChange,
             )

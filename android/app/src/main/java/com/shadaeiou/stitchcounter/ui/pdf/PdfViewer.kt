@@ -9,6 +9,7 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,6 +55,7 @@ fun PdfViewer(
     page: Int,
     invertColors: Boolean,
     onPageChange: (Int) -> Unit,
+    onTapToggleFullscreen: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     if (pdfPath == null) {
@@ -114,6 +116,9 @@ fun PdfViewer(
                             offsetX += pan.x
                             offsetY += pan.y
                         }
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures(onDoubleTap = { onTapToggleFullscreen() })
                     },
             )
         }

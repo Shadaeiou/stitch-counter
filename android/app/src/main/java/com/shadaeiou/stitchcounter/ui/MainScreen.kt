@@ -4,13 +4,14 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,10 +21,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.shadaeiou.stitchcounter.ui.counter.CounterArea
+import com.shadaeiou.stitchcounter.ui.counter.HistoryOverlay
 import com.shadaeiou.stitchcounter.ui.pdf.PdfViewer
 import com.shadaeiou.stitchcounter.ui.pdf.copyPdfToInternal
 import com.shadaeiou.stitchcounter.ui.toolbar.BottomToolbar
@@ -37,10 +38,13 @@ fun MainScreen(
     val vm: CounterViewModel = viewModel(factory = CounterViewModel.Factory())
     val project by vm.project.collectAsStateWithLifecycle()
     val locked by vm.locked.collectAsStateWithLifecycle()
+    val history by vm.history.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var inverted by remember { mutableStateOf(false) }
+    var historyVisible by remember { mutableStateOf(false) }
+    var pdfFullscreen by remember { mutableStateOf(false) }
 
     val pdfPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -59,22 +63,47 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
-            CounterArea(
-                count = project?.count ?: 0,
-                label = project?.label.orEmpty(),
-                locked = locked,
-                onIncrement = vm::increment,
-                onDecrement = vm::decrement,
-                onLabelChange = vm::setLabel,
-                modifier = Modifier.weight(1f),
-            )
+            if (!pdfFullscreen) {
+                Box(modifier = Modifier.weight(1f)) {
+                    CounterArea(
+                        count = project?.count ?: 0,
+                        label = project?.label.orEmpty(),
+                        locked = locked,
+                        onIncrement = vm::increment,
+                        onDecrement = vm::decrement,
+                        onLabelChange = vm::setLabel,
+                        onPullDown = { historyVisible = true },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    HistoryOverlay(
+                        visible = historyVisible,
+                        history = history,
+                        onUndoLast = {
+                            vm.undoLast()
+                        },
+                        onReset = {
+                            vm.reset()
+                            historyVisible = false
+                            scope.launch {
+                                val result = snackbar.showSnackbar(
+                                    message = "Counter reset",
+                                    actionLabel = "Undo",
+                                    duration = androidx.compose.material3.SnackbarDuration.Short,
+                                )
+                                if (result == SnackbarResult.ActionPerformed) vm.undoLast()
+                            }
+                        },
+                        onDismiss = { historyVisible = false },
+                    )
+                }
+            }
             PdfViewer(
                 pdfPath = project?.pdfPath,
                 page = project?.currentPage ?: 0,
                 invertColors = inverted,
                 onPageChange = vm::setPage,
+                onTapToggleFullscreen = { pdfFullscreen = !pdfFullscreen },
                 modifier = Modifier.weight(1f),
             )
             BottomToolbar(
@@ -91,7 +120,5 @@ fun MainScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        // placeholder for any one-shot startup work
-    }
+    LaunchedEffect(Unit) {}
 }
