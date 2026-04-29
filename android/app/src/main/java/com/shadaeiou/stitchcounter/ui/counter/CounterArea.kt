@@ -1,6 +1,7 @@
 package com.shadaeiou.stitchcounter.ui.counter
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.Animatable
+import androidx.compose.animation.core.Animatable as FloatAnimatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -72,7 +73,7 @@ fun CounterArea(
     val scope = rememberCoroutineScope()
 
     val flash = remember { Animatable(Color.Transparent) }
-    val shake = remember { Animatable(0f) }
+    val shake = remember { FloatAnimatable(0f) }
     var hintVisible by remember { mutableStateOf(false) }
     var labelEditing by remember { mutableStateOf(false) }
     var lastTapAt by remember { mutableLongStateOf(0L) }
