@@ -1,5 +1,6 @@
 package com.shadaeiou.stitchcounter.ui.counter
 
+import android.view.SoundEffectConstants
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.core.Animatable as FloatAnimatable
 import androidx.compose.animation.core.LinearEasing
@@ -13,14 +14,18 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -39,16 +44,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.shadaeiou.stitchcounter.StitchCounterApp
+import com.shadaeiou.stitchcounter.data.notes.NoteItem
 import com.shadaeiou.stitchcounter.ui.theme.FlashGreen
 import com.shadaeiou.stitchcounter.ui.theme.FlashRed
 import kotlinx.coroutines.launch
@@ -61,7 +73,7 @@ private const val LONG_PRESS_MS = 400L
 private const val HINT_DELAY_MS = 200L
 private const val MOVE_CANCEL_DP = 10
 private const val PULL_TRIGGER_DP = 60
-private const val FLASH_MS = 220
+private const val FLASH_MS = 600
 
 @Composable
 fun CounterArea(
@@ -70,15 +82,19 @@ fun CounterArea(
     locked: Boolean,
     interactionsEnabled: Boolean,
     backgroundArgb: Long,
+    knitPattern: String,
+    pinnedNotes: List<NoteItem>,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
     onLabelChange: (String) -> Unit,
     onPullDown: () -> Unit,
     onReset: () -> Unit,
+    onEditPattern: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val gesturesActive = !locked && interactionsEnabled
     val haptics = remember { StitchCounterApp.instance.haptics }
+    val view = LocalView.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val currentCount by rememberUpdatedState(count)
@@ -103,6 +119,7 @@ fun CounterArea(
     val moveCancelPx = with(density) { MOVE_CANCEL_DP.dp.toPx() }
     val pullTriggerPx = with(density) { PULL_TRIGGER_DP.dp.toPx() }
     val backgroundColor = Color(backgroundArgb.toInt())
+    val patternLetter = stitchLetterFor(count, knitPattern)
 
     Box(
         modifier = modifier
@@ -126,7 +143,7 @@ fun CounterArea(
                         val startPos = down.position
                         var hintFired = false
                         var pullTracking = false
-                        var pressFired = false  // tap or long-press already resolved
+                        var pressFired = false
 
                         while (true) {
                             val elapsed = System.currentTimeMillis() - startTime
@@ -170,6 +187,7 @@ fun CounterArea(
                                     if (nowMs - lastTapAt >= TAP_DEBOUNCE_MS) {
                                         lastTapAt = nowMs
                                         haptics.light()
+                                        view.playSoundEffect(SoundEffectConstants.CLICK)
                                         onIncrement()
                                         scope.launch {
                                             flash.snapTo(FlashGreen)
@@ -220,31 +238,87 @@ fun CounterArea(
                     editing = labelEditing,
                     onStartEdit = { if (!locked) labelEditing = true },
                     onCommit = {
-                        onLabelChange(it)
+                        if (it != label) onLabelChange(it)
                         labelEditing = false
                     },
                 )
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = count.toString(),
-                        style = MaterialTheme.typography.displayLarge,
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                    )
-                    if (hintVisible) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(contentAlignment = Alignment.Center) {
                         Text(
-                            "−1",
+                            text = count.toString(),
                             style = MaterialTheme.typography.displayLarge,
-                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                        )
+                        if (hintVisible) {
+                            Text(
+                                "−1",
+                                style = MaterialTheme.typography.displayLarge,
+                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                            )
+                        }
+                    }
+                    if (patternLetter != null) {
+                        Text(
+                            text = patternLetter.toString(),
+                            style = MaterialTheme.typography.displayMedium,
+                            color = if (patternLetter == 'K') Color(0xFF4ADE80) else Color(0xFFF87171),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 24.dp),
                         )
                     }
                 }
             }
         }
 
-        // Reset button declared last so it sits above the gesture box and
-        // receives taps first; clickable consumes the down so the gesture
-        // box's awaitFirstDown(requireUnconsumed=true) skips it.
+        // Pinned notes ribbon at the very top of the counter screen.
+        if (pinnedNotes.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 8.dp, start = 64.dp, end = 64.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                pinnedNotes.take(3).forEach { note ->
+                    Text(
+                        note.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.Black.copy(alpha = 0.45f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                }
+            }
+        }
+
+        // Pattern editor button (top-start).
+        IconButton(
+            onClick = onEditPattern,
+            enabled = !locked,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+                .border(
+                    BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
+                    CircleShape,
+                ),
+        ) {
+            Icon(
+                Icons.Default.Tune,
+                contentDescription = "Edit knit pattern",
+                tint = Color.White.copy(alpha = 0.85f),
+            )
+        }
+
+        // Reset button (top-end). Declared last so it sits above the gesture
+        // box; clickable consumes the down so the gesture box's
+        // awaitFirstDown(requireUnconsumed=true) skips it.
         IconButton(
             onClick = onReset,
             enabled = !locked && interactionsEnabled,
@@ -274,6 +348,10 @@ private fun LabelEditor(
 ) {
     if (editing) {
         var draft by remember(label) { mutableStateOf(label) }
+        val currentDraft = rememberUpdatedState(draft)
+        val commit = rememberUpdatedState(onCommit)
+        val focusRequester = remember { FocusRequester() }
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
         BasicTextField(
             value = draft,
             onValueChange = { draft = it },
@@ -285,8 +363,18 @@ private fun LabelEditor(
                 fontSize = MaterialTheme.typography.titleLarge.fontSize,
             ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { onCommit(draft.trim()) }),
-            modifier = Modifier.padding(bottom = 16.dp),
+            keyboardActions = KeyboardActions(onDone = { commit.value(currentDraft.value.trim()) }),
+            modifier = Modifier
+                .padding(bottom = 16.dp)
+                .focusRequester(focusRequester)
+                .onFocusChanged { state ->
+                    if (!state.isFocused) {
+                        // Field lost focus (user tapped away or navigated to
+                        // another screen). Commit and exit edit mode so the
+                        // keyboard doesn't keep popping back up later.
+                        commit.value(currentDraft.value.trim())
+                    }
+                },
         )
     } else {
         val display = label.ifBlank { "Tap to set label" }
@@ -302,4 +390,11 @@ private fun LabelEditor(
                 .clickable(onClick = onStartEdit),
         )
     }
+}
+
+private fun stitchLetterFor(count: Int, pattern: String): Char? {
+    val cleaned = pattern.filter { it == 'K' || it == 'P' }
+    if (cleaned.isEmpty()) return null
+    val safeCount = if (count < 0) 0 else count
+    return cleaned[safeCount % cleaned.length]
 }

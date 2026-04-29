@@ -10,7 +10,7 @@ import com.shadaeiou.stitchcounter.data.db.entities.Project
 
 @Database(
     entities = [Project::class, HistoryEntry::class, PageAnnotation::class],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {

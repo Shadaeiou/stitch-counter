@@ -9,8 +9,8 @@ val Accent = Color(0xFF22C55E)
 val AccentRed = Color(0xFFEF4444)
 val Muted = Color(0xFF6B7280)
 
-val FlashGreen = Color(0x6622C55E)
-val FlashRed = Color(0x66EF4444)
+val FlashGreen = Color(0xCC22C55E)
+val FlashRed = Color(0xCCEF4444)
 
 data class CounterBgChoice(val label: String, val argb: Long)
 

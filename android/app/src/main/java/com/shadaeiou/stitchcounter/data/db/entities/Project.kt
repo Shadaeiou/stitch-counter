@@ -11,7 +11,12 @@ data class Project(
     val count: Int = 0,
     val currentPage: Int = 0,
     val pdfPath: String? = null,
+    // JSON-encoded list of NoteItem (see data.notes.NoteItem). Empty string =
+    // no notes. Older plain-text notes are migrated automatically as a single
+    // unpinned note when first parsed.
     val notes: String = "",
+    // Repeating K/P pattern (e.g. "KKP"). Empty disables the indicator.
+    val knitPattern: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 )

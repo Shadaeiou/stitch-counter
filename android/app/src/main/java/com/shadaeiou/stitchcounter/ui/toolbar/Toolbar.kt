@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +35,10 @@ fun BottomToolbar(
     locked: Boolean,
     inverted: Boolean,
     activeTool: Tool,
+    hasPdf: Boolean,
+    pdfHidden: Boolean,
     onUploadPdf: () -> Unit,
+    onTogglePdfHidden: () -> Unit,
     onSelectPen: () -> Unit,
     onLongPressPen: () -> Unit,
     onSelectEraser: () -> Unit,
@@ -54,6 +59,17 @@ fun BottomToolbar(
     ) {
         IconButton(onClick = onUploadPdf) {
             Icon(Icons.Default.UploadFile, contentDescription = "Upload PDF")
+        }
+        if (hasPdf) {
+            IconButton(onClick = onTogglePdfHidden) {
+                Icon(
+                    if (pdfHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = if (pdfHidden) "Show PDF" else "Hide PDF",
+                    tint = if (pdfHidden)
+                        MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
         Box(
             modifier = Modifier

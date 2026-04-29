@@ -84,6 +84,12 @@ class ProjectRepository(
         return updated
     }
 
+    suspend fun setKnitPattern(project: Project, pattern: String): Project {
+        val updated = project.copy(knitPattern = pattern, updatedAt = System.currentTimeMillis())
+        projectDao.update(updated)
+        return updated
+    }
+
     suspend fun saveStrokes(projectId: Long, page: Int, strokes: List<Stroke>) {
         annotationDao.upsert(PageAnnotation(projectId = projectId, page = page, strokesJson = strokes.toJson()))
     }

@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
 import com.shadaeiou.stitchcounter.ui.MainScreen
+import com.shadaeiou.stitchcounter.ui.notes.NotesScreen
 import com.shadaeiou.stitchcounter.ui.settings.SettingsScreen
 import com.shadaeiou.stitchcounter.ui.theme.StitchCounterTheme
 import com.shadaeiou.stitchcounter.update.DownloadResult
@@ -107,12 +108,25 @@ private fun AppRoot(activityVm: CounterViewModel) {
         if (result is UpdateCheckResult.Available) pending = result.info
     }
 
+    val notes by activityVm.notes.collectAsState(initial = emptyList())
+
     when (screen) {
         Screen.Main -> MainScreen(
             vm = activityVm,
             counterBackgroundArgb = counterBg,
             onOpenSettings = { screen = Screen.Settings },
+            onOpenNotes = { screen = Screen.Notes },
         )
+        Screen.Notes -> {
+            BackHandler { screen = Screen.Main }
+            NotesScreen(
+                notes = notes,
+                onBack = { screen = Screen.Main },
+                onAdd = activityVm::addNote,
+                onTogglePin = activityVm::togglePin,
+                onDelete = activityVm::deleteNote,
+            )
+        }
         Screen.Settings -> {
             BackHandler { screen = Screen.Main }
             SettingsScreen(
@@ -157,4 +171,4 @@ private fun AppRoot(activityVm: CounterViewModel) {
     }
 }
 
-private enum class Screen { Main, Settings }
+private enum class Screen { Main, Notes, Settings }

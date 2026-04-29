@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke as DrawStroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -130,12 +131,14 @@ fun PdfViewer(
             .background(if (invertColors) Color.Black else Color.White),
     ) {
         // Bitmap and strokes share the same graphicsLayer transform so strokes
-        // remain anchored to the PDF page during zoom/pan.
+        // remain anchored to the PDF page during zoom/pan. transformOrigin is
+        // pinned to the top-left so screen<->page coordinate math is simple.
         val pageLayer = Modifier
             .fillMaxSize()
             .graphicsLayer(
                 scaleX = scale, scaleY = scale,
                 translationX = offsetX, translationY = offsetY,
+                transformOrigin = TransformOrigin(0f, 0f),
             )
 
         bitmap?.let {

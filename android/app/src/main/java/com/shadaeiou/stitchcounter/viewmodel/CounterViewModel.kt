@@ -6,9 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.shadaeiou.stitchcounter.StitchCounterApp
 import com.shadaeiou.stitchcounter.data.db.entities.HistoryEntry
 import com.shadaeiou.stitchcounter.data.db.entities.Project
+import com.shadaeiou.stitchcounter.data.notes.NoteItem
+import com.shadaeiou.stitchcounter.data.notes.parseNotes
+import com.shadaeiou.stitchcounter.data.notes.toNotesJson
 import com.shadaeiou.stitchcounter.data.repo.ProjectRepository
 import com.shadaeiou.stitchcounter.ui.pdf.Stroke
 import com.shadaeiou.stitchcounter.ui.pdf.StrokePoint
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -56,6 +60,18 @@ class CounterViewModel(
             else repository.observeHistory(p.id)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val notes: StateFlow<List<NoteItem>> = _project
+        .map { parseNotes(it?.notes.orEmpty()) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val pinnedNotes: StateFlow<List<NoteItem>> = notes
+        .map { it.filter { n -> n.pinned } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val knitPattern: StateFlow<String> = _project
+        .map { it?.knitPattern.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     val strokes: StateFlow<List<Stroke>> = _project
         .map { p -> p?.let { it.id to it.currentPage } }
@@ -115,6 +131,39 @@ class CounterViewModel(
     fun setNotes(notes: String) = viewModelScope.launch {
         val p = _project.value ?: return@launch
         _project.value = repository.setNotes(p, notes)
+    }
+
+    private fun saveNotesList(list: List<NoteItem>) = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        _project.value = repository.setNotes(p, list.toNotesJson())
+    }
+
+    fun addNote(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+        val current = notes.value
+        saveNotesList(current + NoteItem(id = UUID.randomUUID().toString(), text = trimmed))
+    }
+
+    fun deleteNote(id: String) {
+        val current = notes.value
+        saveNotesList(current.filter { it.id != id })
+    }
+
+    fun togglePin(id: String) {
+        val current = notes.value
+        saveNotesList(current.map { if (it.id == id) it.copy(pinned = !it.pinned) else it })
+    }
+
+    fun updateNote(id: String, text: String) {
+        val trimmed = text.trim()
+        val current = notes.value
+        saveNotesList(current.map { if (it.id == id) it.copy(text = trimmed) else it })
+    }
+
+    fun setKnitPattern(pattern: String) = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        _project.value = repository.setKnitPattern(p, pattern)
     }
 
     fun toggleLock() {
