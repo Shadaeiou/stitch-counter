@@ -37,6 +37,12 @@ class CounterViewModel(
     private val _tool = MutableStateFlow(Tool.None)
     val tool: StateFlow<Tool> = _tool.asStateFlow()
 
+    private val _penColorArgb = MutableStateFlow(0xFFEF4444L)  // red
+    val penColorArgb: StateFlow<Long> = _penColorArgb.asStateFlow()
+
+    private val _penWidthPx = MutableStateFlow(6f)
+    val penWidthPx: StateFlow<Float> = _penWidthPx.asStateFlow()
+
     val history: StateFlow<List<HistoryEntry>> = _project
         .flatMapLatest { p ->
             if (p == null) flow { emit(emptyList<HistoryEntry>()) }
@@ -109,6 +115,9 @@ class CounterViewModel(
     fun selectTool(t: Tool) {
         _tool.value = if (_tool.value == t) Tool.None else t
     }
+
+    fun setPenColor(argb: Long) { _penColorArgb.value = argb }
+    fun setPenWidth(px: Float) { _penWidthPx.value = px.coerceIn(1f, 24f) }
 
     fun addStroke(points: List<StrokePoint>, colorArgb: Long, widthPx: Float) = viewModelScope.launch {
         if (points.size < 2) return@launch

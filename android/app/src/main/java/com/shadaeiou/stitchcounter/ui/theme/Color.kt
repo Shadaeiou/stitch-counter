@@ -15,10 +15,19 @@ val FlashRed = Color(0x66EF4444)
 data class CounterBgChoice(val label: String, val argb: Long)
 
 val CounterBackgrounds: List<CounterBgChoice> = listOf(
-    CounterBgChoice("Black", 0xFF0A0A0AL),
-    CounterBgChoice("Charcoal", 0xFF1F1F1FL),
-    CounterBgChoice("Navy", 0xFF0F1729L),
-    CounterBgChoice("Forest", 0xFF0A1F0FL),
-    CounterBgChoice("Plum", 0xFF1A0F1FL),
-    CounterBgChoice("Wine", 0xFF1F0A0AL),
+    CounterBgChoice("Black",   0xFF0A0A0AL),
+    CounterBgChoice("Slate",   0xFF1B2A3AL),
+    CounterBgChoice("Indigo",  0xFF1E2A78L),
+    CounterBgChoice("Teal",    0xFF0E4F4FL),
+    CounterBgChoice("Forest",  0xFF134E2BL),
+    CounterBgChoice("Plum",    0xFF3F1A5CL),
+    CounterBgChoice("Wine",    0xFF5C1530L),
+)
+
+data class PenColorChoice(val label: String, val argb: Long)
+
+val PenColors: List<PenColorChoice> = listOf(
+    PenColorChoice("Red",   0xFFEF4444L),
+    PenColorChoice("Black", 0xFF000000L),
+    PenColorChoice("Blue",  0xFF2563EBL),
 )

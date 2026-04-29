@@ -45,6 +45,8 @@ fun MainScreen(
     val history by vm.history.collectAsStateWithLifecycle()
     val tool by vm.tool.collectAsStateWithLifecycle()
     val strokes by vm.strokes.collectAsStateWithLifecycle()
+    val penColor by vm.penColorArgb.collectAsStateWithLifecycle()
+    val penWidth by vm.penWidthPx.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -122,11 +124,15 @@ fun MainScreen(
                     invertColors = inverted,
                     tool = tool,
                     strokes = strokes,
+                    penColorArgb = penColor,
+                    penWidthPx = penWidth,
                     onPageChange = vm::setPage,
-                    onAddStroke = { points -> vm.addStroke(points, colorArgb = 0xFFEF4444L, widthPx = 6f) },
+                    onAddStroke = { points -> vm.addStroke(points, colorArgb = penColor, widthPx = penWidth) },
                     onEraseAt = { x, y -> vm.eraseAt(x, y, toleranceNorm = 0.025f) },
                     onTapToggleFullscreen = { pdfFullscreen = !pdfFullscreen },
                     onRemovePdf = { confirmRemovePdf = true },
+                    onChangePenColor = vm::setPenColor,
+                    onChangePenWidth = vm::setPenWidth,
                     modifier = Modifier.weight(1f),
                 )
             }
