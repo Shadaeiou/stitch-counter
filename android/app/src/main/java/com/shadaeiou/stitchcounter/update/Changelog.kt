@@ -13,6 +13,14 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 18,
+        versionName = "0.1.18",
+        notes = listOf(
+            "New PDF-screen toolbar at the bottom of the PDF pane with Upload, Pen (long-press for color/thickness), Eraser, and Invert colors.",
+            "Main bottom toolbar slimmed down to Hide/Show PDF, Notes, Lock, and Settings (plus Upload only when no PDF has been loaded yet).",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 17,
         versionName = "0.1.17",
         notes = listOf(

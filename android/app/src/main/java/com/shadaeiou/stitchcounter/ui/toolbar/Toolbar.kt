@@ -1,18 +1,12 @@
 package com.shadaeiou.stitchcounter.ui.toolbar
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoFixHigh
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.InvertColors
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Notes
@@ -27,23 +21,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.shadaeiou.stitchcounter.viewmodel.Tool
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun BottomToolbar(
     locked: Boolean,
-    inverted: Boolean,
-    activeTool: Tool,
     hasPdf: Boolean,
     pdfHidden: Boolean,
     onUploadPdf: () -> Unit,
     onTogglePdfHidden: () -> Unit,
-    onSelectPen: () -> Unit,
-    onLongPressPen: () -> Unit,
-    onSelectEraser: () -> Unit,
     onOpenNotes: () -> Unit,
-    onToggleInvert: () -> Unit,
     onToggleLock: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -57,8 +43,12 @@ fun BottomToolbar(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onUploadPdf) {
-            Icon(Icons.Default.UploadFile, contentDescription = "Upload PDF")
+        // Upload only lives here when no PDF has been loaded yet (entry
+        // point). Once a PDF is loaded it lives in the in-pane PdfToolbar.
+        if (!hasPdf) {
+            IconButton(onClick = onUploadPdf) {
+                Icon(Icons.Default.UploadFile, contentDescription = "Upload PDF")
+            }
         }
         if (hasPdf) {
             IconButton(onClick = onTogglePdfHidden) {
@@ -71,41 +61,8 @@ fun BottomToolbar(
                 )
             }
         }
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .combinedClickable(
-                    onClick = onSelectPen,
-                    onLongClick = onLongPressPen,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Default.Edit,
-                contentDescription = "Pen (long-press for options)",
-                tint = if (activeTool == Tool.Pen)
-                    MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface,
-            )
-        }
-        IconButton(onClick = onSelectEraser) {
-            Icon(
-                Icons.Default.AutoFixHigh,
-                contentDescription = "Eraser",
-                tint = if (activeTool == Tool.Eraser)
-                    MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface,
-            )
-        }
         IconButton(onClick = onOpenNotes) {
             Icon(Icons.Default.Notes, contentDescription = "Notes")
-        }
-        IconButton(onClick = onToggleInvert) {
-            Icon(
-                Icons.Default.InvertColors,
-                contentDescription = "Invert colors",
-                tint = if (inverted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            )
         }
         IconButton(onClick = onToggleLock) {
             Icon(

@@ -174,6 +174,20 @@ fun MainScreen(
                                 onUndoStroke = vm::undoLastStroke,
                                 onRedoStroke = vm::redoLastStroke,
                                 onPenDrawStart = { penPanelVisible = false },
+                                onUploadPdf = { pdfPicker.launch(arrayOf("application/pdf")) },
+                                onSelectPen = {
+                                    penPanelVisible = false
+                                    vm.selectTool(Tool.Pen)
+                                },
+                                onLongPressPen = {
+                                    if (tool != Tool.Pen) vm.selectTool(Tool.Pen)
+                                    penPanelVisible = true
+                                },
+                                onSelectEraser = {
+                                    penPanelVisible = false
+                                    vm.selectTool(Tool.Eraser)
+                                },
+                                onToggleInvert = { inverted = !inverted },
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }
@@ -182,26 +196,11 @@ fun MainScreen(
             }
             BottomToolbar(
                 locked = locked,
-                inverted = inverted,
-                activeTool = tool,
                 hasPdf = hasPdf,
                 pdfHidden = pdfHidden,
                 onUploadPdf = { pdfPicker.launch(arrayOf("application/pdf")) },
                 onTogglePdfHidden = { pdfHidden = !pdfHidden },
-                onSelectPen = {
-                    penPanelVisible = false
-                    vm.selectTool(Tool.Pen)
-                },
-                onLongPressPen = {
-                    if (tool != Tool.Pen) vm.selectTool(Tool.Pen)
-                    penPanelVisible = true
-                },
-                onSelectEraser = {
-                    penPanelVisible = false
-                    vm.selectTool(Tool.Eraser)
-                },
                 onOpenNotes = onOpenNotes,
-                onToggleInvert = { inverted = !inverted },
                 onToggleLock = vm::toggleLock,
                 onOpenSettings = onOpenSettings,
             )

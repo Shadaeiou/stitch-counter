@@ -27,12 +27,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.InvertColors
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -91,6 +96,11 @@ fun PdfViewer(
     onUndoStroke: () -> Unit,
     onRedoStroke: () -> Unit,
     onPenDrawStart: () -> Unit,
+    onUploadPdf: () -> Unit,
+    onSelectPen: () -> Unit,
+    onLongPressPen: () -> Unit,
+    onSelectEraser: () -> Unit,
+    onToggleInvert: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (pdfPath == null) return
@@ -124,9 +134,11 @@ fun PdfViewer(
     // Active stroke being drawn, in normalized 0..1 PDF coords (un-transformed).
     var activeStroke by remember { mutableStateOf<List<StrokePoint>>(emptyList()) }
 
+    Column(modifier = modifier.fillMaxSize()) {
     Box(
-        modifier = modifier
-            .fillMaxSize()
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxWidth()
             .clipToBounds()
             .background(if (invertColors) Color.Black else Color.White),
     ) {
@@ -276,6 +288,77 @@ fun PdfViewer(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                 )
             }
+        }
+    }
+    PdfToolbar(
+        activeTool = tool,
+        inverted = invertColors,
+        onUploadPdf = onUploadPdf,
+        onSelectPen = onSelectPen,
+        onLongPressPen = onLongPressPen,
+        onSelectEraser = onSelectEraser,
+        onToggleInvert = onToggleInvert,
+    )
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun PdfToolbar(
+    activeTool: Tool,
+    inverted: Boolean,
+    onUploadPdf: () -> Unit,
+    onSelectPen: () -> Unit,
+    onLongPressPen: () -> Unit,
+    onSelectEraser: () -> Unit,
+    onToggleInvert: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onUploadPdf) {
+            Icon(Icons.Default.UploadFile, contentDescription = "Upload PDF")
+        }
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .combinedClickable(
+                    onClick = onSelectPen,
+                    onLongClick = onLongPressPen,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Default.Edit,
+                contentDescription = "Pen (long-press for options)",
+                tint = if (activeTool == Tool.Pen)
+                    MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        IconButton(onClick = onSelectEraser) {
+            Icon(
+                Icons.Default.AutoFixHigh,
+                contentDescription = "Eraser",
+                tint = if (activeTool == Tool.Eraser)
+                    MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        IconButton(onClick = onToggleInvert) {
+            Icon(
+                Icons.Default.InvertColors,
+                contentDescription = "Invert colors",
+                tint = if (inverted)
+                    MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface,
+            )
         }
     }
 }
