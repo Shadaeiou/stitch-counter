@@ -20,7 +20,7 @@ class StitchCounterApp : Application() {
         instance = this
         prefs = UserPrefs(this)
         val db = AppDatabase.get(this)
-        repository = ProjectRepository(db.projectDao(), db.historyDao())
+        repository = ProjectRepository(db.projectDao(), db.historyDao(), db.annotationDao())
         haptics = Haptics(this)
     }
 

@@ -1,17 +1,26 @@
 package com.shadaeiou.stitchcounter.data.repo
 
+import com.shadaeiou.stitchcounter.data.db.AnnotationDao
 import com.shadaeiou.stitchcounter.data.db.HistoryDao
 import com.shadaeiou.stitchcounter.data.db.ProjectDao
 import com.shadaeiou.stitchcounter.data.db.entities.HistoryEntry
+import com.shadaeiou.stitchcounter.data.db.entities.PageAnnotation
 import com.shadaeiou.stitchcounter.data.db.entities.Project
+import com.shadaeiou.stitchcounter.ui.pdf.Stroke
+import com.shadaeiou.stitchcounter.ui.pdf.strokesFromJson
+import com.shadaeiou.stitchcounter.ui.pdf.toJson
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class ProjectRepository(
     private val projectDao: ProjectDao,
     private val historyDao: HistoryDao,
+    private val annotationDao: AnnotationDao,
 ) {
     fun observeProject(id: Long): Flow<Project?> = projectDao.observe(id)
     fun observeHistory(projectId: Long): Flow<List<HistoryEntry>> = historyDao.observeRecent(projectId)
+    fun observeStrokes(projectId: Long, page: Int): Flow<List<Stroke>> =
+        annotationDao.observe(projectId, page).map { it?.let { a -> strokesFromJson(a.strokesJson) } ?: emptyList() }
 
     suspend fun ensureProject(): Project {
         return projectDao.mostRecent() ?: run {
@@ -67,6 +76,16 @@ class ProjectRepository(
         val updated = project.copy(currentPage = page, updatedAt = System.currentTimeMillis())
         projectDao.update(updated)
         return updated
+    }
+
+    suspend fun setNotes(project: Project, notes: String): Project {
+        val updated = project.copy(notes = notes, updatedAt = System.currentTimeMillis())
+        projectDao.update(updated)
+        return updated
+    }
+
+    suspend fun saveStrokes(projectId: Long, page: Int, strokes: List<Stroke>) {
+        annotationDao.upsert(PageAnnotation(projectId = projectId, page = page, strokesJson = strokes.toJson()))
     }
 
     suspend fun undoLast(project: Project): Project {

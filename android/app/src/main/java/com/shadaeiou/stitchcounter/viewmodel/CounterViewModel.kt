@@ -7,14 +7,22 @@ import com.shadaeiou.stitchcounter.StitchCounterApp
 import com.shadaeiou.stitchcounter.data.db.entities.HistoryEntry
 import com.shadaeiou.stitchcounter.data.db.entities.Project
 import com.shadaeiou.stitchcounter.data.repo.ProjectRepository
+import com.shadaeiou.stitchcounter.ui.pdf.Stroke
+import com.shadaeiou.stitchcounter.ui.pdf.StrokePoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.math.pow
+import kotlin.math.sqrt
+
+enum class Tool { None, Pen, Eraser }
 
 class CounterViewModel(
     private val repository: ProjectRepository,
@@ -26,10 +34,22 @@ class CounterViewModel(
     private val _locked = MutableStateFlow(false)
     val locked: StateFlow<Boolean> = _locked.asStateFlow()
 
+    private val _tool = MutableStateFlow(Tool.None)
+    val tool: StateFlow<Tool> = _tool.asStateFlow()
+
     val history: StateFlow<List<HistoryEntry>> = _project
         .flatMapLatest { p ->
             if (p == null) flow { emit(emptyList<HistoryEntry>()) }
             else repository.observeHistory(p.id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val strokes: StateFlow<List<Stroke>> = _project
+        .map { p -> p?.let { it.id to it.currentPage } }
+        .distinctUntilChanged()
+        .flatMapLatest { key ->
+            if (key == null) flow { emit(emptyList<Stroke>()) }
+            else repository.observeStrokes(key.first, key.second)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -77,8 +97,46 @@ class CounterViewModel(
         _project.value = repository.setPage(p, page)
     }
 
+    fun setNotes(notes: String) = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        _project.value = repository.setNotes(p, notes)
+    }
+
     fun toggleLock() {
         _locked.value = !_locked.value
+    }
+
+    fun selectTool(t: Tool) {
+        _tool.value = if (_tool.value == t) Tool.None else t
+    }
+
+    fun addStroke(points: List<StrokePoint>, colorArgb: Long, widthPx: Float) = viewModelScope.launch {
+        if (points.size < 2) return@launch
+        val p = _project.value ?: return@launch
+        val current = strokes.value
+        repository.saveStrokes(
+            p.id, p.currentPage,
+            current + Stroke(points = points, colorArgb = colorArgb, widthPx = widthPx),
+        )
+    }
+
+    fun eraseAt(x: Float, y: Float, toleranceNorm: Float) = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        val current = strokes.value
+        if (current.isEmpty()) return@launch
+        val tol2 = toleranceNorm.pow(2)
+        val filtered = current.filter { stroke ->
+            stroke.points.none { pt -> (pt.x - x).pow(2) + (pt.y - y).pow(2) < tol2 }
+        }
+        if (filtered.size != current.size) {
+            repository.saveStrokes(p.id, p.currentPage, filtered)
+        }
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    fun strokeContains(stroke: Stroke, x: Float, y: Float, tolerance: Float): Boolean {
+        val tol2 = tolerance.pow(2)
+        return stroke.points.any { (it.x - x).pow(2) + (it.y - y).pow(2) < tol2 }
     }
 
     class Factory : ViewModelProvider.Factory {

@@ -1,7 +1,6 @@
 package com.shadaeiou.stitchcounter.ui
 
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -13,7 +12,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,10 +22,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shadaeiou.stitchcounter.ui.counter.CounterArea
 import com.shadaeiou.stitchcounter.ui.counter.HistoryOverlay
+import com.shadaeiou.stitchcounter.ui.notes.NotesSheet
 import com.shadaeiou.stitchcounter.ui.pdf.PdfViewer
 import com.shadaeiou.stitchcounter.ui.pdf.copyPdfToInternal
 import com.shadaeiou.stitchcounter.ui.toolbar.BottomToolbar
 import com.shadaeiou.stitchcounter.viewmodel.CounterViewModel
+import com.shadaeiou.stitchcounter.viewmodel.Tool
 import kotlinx.coroutines.launch
 
 @Composable
@@ -38,12 +38,15 @@ fun MainScreen(
     val project by vm.project.collectAsStateWithLifecycle()
     val locked by vm.locked.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
+    val tool by vm.tool.collectAsStateWithLifecycle()
+    val strokes by vm.strokes.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var inverted by remember { mutableStateOf(false) }
     var historyVisible by remember { mutableStateOf(false) }
     var pdfFullscreen by remember { mutableStateOf(false) }
+    var notesVisible by remember { mutableStateOf(false) }
 
     val pdfPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -78,9 +81,7 @@ fun MainScreen(
                     HistoryOverlay(
                         visible = historyVisible,
                         history = history,
-                        onUndoLast = {
-                            vm.undoLast()
-                        },
+                        onUndoLast = { vm.undoLast() },
                         onReset = {
                             vm.reset()
                             historyVisible = false
@@ -101,17 +102,22 @@ fun MainScreen(
                 pdfPath = project?.pdfPath,
                 page = project?.currentPage ?: 0,
                 invertColors = inverted,
+                tool = tool,
+                strokes = strokes,
                 onPageChange = vm::setPage,
+                onAddStroke = { points -> vm.addStroke(points, colorArgb = 0xFFEF4444L, widthPx = 6f) },
+                onEraseAt = { x, y -> vm.eraseAt(x, y, toleranceNorm = 0.025f) },
                 onTapToggleFullscreen = { pdfFullscreen = !pdfFullscreen },
                 modifier = Modifier.weight(1f),
             )
             BottomToolbar(
                 locked = locked,
                 inverted = inverted,
+                activeTool = tool,
                 onUploadPdf = { pdfPicker.launch(arrayOf("application/pdf")) },
-                onPenStub = { Toast.makeText(context, "Coming soon", Toast.LENGTH_SHORT).show() },
-                onEraserStub = { Toast.makeText(context, "Coming soon", Toast.LENGTH_SHORT).show() },
-                onNotesStub = { Toast.makeText(context, "Coming soon", Toast.LENGTH_SHORT).show() },
+                onSelectPen = { vm.selectTool(Tool.Pen) },
+                onSelectEraser = { vm.selectTool(Tool.Eraser) },
+                onOpenNotes = { notesVisible = true },
                 onToggleInvert = { inverted = !inverted },
                 onToggleLock = vm::toggleLock,
                 onOpenSettings = onOpenSettings,
@@ -119,5 +125,11 @@ fun MainScreen(
         }
     }
 
-    LaunchedEffect(Unit) {}
+    if (notesVisible) {
+        NotesSheet(
+            initialText = project?.notes.orEmpty(),
+            onDismiss = { notesVisible = false },
+            onSave = { vm.setNotes(it) },
+        )
+    }
 }

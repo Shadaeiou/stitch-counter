@@ -11,6 +11,7 @@ data class Project(
     val count: Int = 0,
     val currentPage: Int = 0,
     val pdfPath: String? = null,
+    val notes: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 )

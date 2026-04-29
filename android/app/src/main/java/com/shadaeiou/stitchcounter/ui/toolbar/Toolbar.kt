@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.InvertColors
 import androidx.compose.material.icons.filled.Lock
@@ -22,15 +22,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.shadaeiou.stitchcounter.viewmodel.Tool
 
 @Composable
 fun BottomToolbar(
     locked: Boolean,
     inverted: Boolean,
+    activeTool: Tool,
     onUploadPdf: () -> Unit,
-    onPenStub: () -> Unit,
-    onEraserStub: () -> Unit,
-    onNotesStub: () -> Unit,
+    onSelectPen: () -> Unit,
+    onSelectEraser: () -> Unit,
+    onOpenNotes: () -> Unit,
     onToggleInvert: () -> Unit,
     onToggleLock: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -48,13 +50,25 @@ fun BottomToolbar(
         IconButton(onClick = onUploadPdf) {
             Icon(Icons.Default.UploadFile, contentDescription = "Upload PDF")
         }
-        IconButton(onClick = onPenStub) {
-            Icon(Icons.Default.Edit, contentDescription = "Pen")
+        IconButton(onClick = onSelectPen) {
+            Icon(
+                Icons.Default.Edit,
+                contentDescription = "Pen",
+                tint = if (activeTool == Tool.Pen)
+                    MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface,
+            )
         }
-        IconButton(onClick = onEraserStub) {
-            Icon(Icons.Default.Brush, contentDescription = "Eraser")
+        IconButton(onClick = onSelectEraser) {
+            Icon(
+                Icons.Default.AutoFixHigh,
+                contentDescription = "Eraser",
+                tint = if (activeTool == Tool.Eraser)
+                    MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface,
+            )
         }
-        IconButton(onClick = onNotesStub) {
+        IconButton(onClick = onOpenNotes) {
             Icon(Icons.Default.Notes, contentDescription = "Notes")
         }
         IconButton(onClick = onToggleInvert) {

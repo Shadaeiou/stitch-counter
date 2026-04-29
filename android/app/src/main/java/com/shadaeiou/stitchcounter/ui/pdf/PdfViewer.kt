@@ -7,8 +7,11 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -33,11 +36,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke as DrawStroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.shadaeiou.stitchcounter.viewmodel.Tool
 import java.io.File
 
 private class PdfHandle(file: File) : AutoCloseable {
@@ -54,8 +63,12 @@ fun PdfViewer(
     pdfPath: String?,
     page: Int,
     invertColors: Boolean,
+    tool: Tool,
+    strokes: List<Stroke>,
     onPageChange: (Int) -> Unit,
-    onTapToggleFullscreen: () -> Unit = {},
+    onAddStroke: (List<StrokePoint>) -> Unit,
+    onEraseAt: (Float, Float) -> Unit,
+    onTapToggleFullscreen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (pdfPath == null) {
@@ -70,9 +83,7 @@ fun PdfViewer(
     val handle = remember(pdfPath) {
         runCatching { PdfHandle(File(pdfPath)) }.getOrNull()
     }
-    DisposableEffect(handle) {
-        onDispose { handle?.close() }
-    }
+    DisposableEffect(handle) { onDispose { handle?.close() } }
 
     if (handle == null) {
         Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
@@ -95,6 +106,10 @@ fun PdfViewer(
         bitmap = renderPage(handle, safePage, invertColors)
     }
 
+    // Active stroke being drawn (in normalized 0..1 coords)
+    var activeStroke by remember { mutableStateOf<List<StrokePoint>>(emptyList()) }
+    var canvasSize by remember { mutableStateOf(Offset.Zero) }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -109,19 +124,76 @@ fun PdfViewer(
                     .graphicsLayer(
                         scaleX = scale, scaleY = scale,
                         translationX = offsetX, translationY = offsetY,
-                    )
-                    .pointerInput(safePage) {
+                    ),
+            )
+        }
+
+        // Overlay layer for strokes + tool gestures.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(tool, safePage, pdfPath) {
+                    when (tool) {
+                        Tool.None -> {
+                            detectTapGestures(onDoubleTap = { onTapToggleFullscreen() })
+                        }
+                        Tool.Pen -> {
+                            awaitEachGesture {
+                                val down = awaitFirstDown(requireUnconsumed = false)
+                                val w = size.width.toFloat().coerceAtLeast(1f)
+                                val h = size.height.toFloat().coerceAtLeast(1f)
+                                val pts = mutableListOf<StrokePoint>()
+                                pts += StrokePoint(down.position.x / w, down.position.y / h)
+                                activeStroke = pts.toList()
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val p = event.changes.firstOrNull { it.id == down.id } ?: break
+                                    pts += StrokePoint(p.position.x / w, p.position.y / h)
+                                    activeStroke = pts.toList()
+                                    if (!p.pressed) break
+                                }
+                                if (pts.size >= 2) onAddStroke(pts.toList())
+                                activeStroke = emptyList()
+                            }
+                        }
+                        Tool.Eraser -> {
+                            awaitEachGesture {
+                                val down = awaitFirstDown(requireUnconsumed = false)
+                                val w = size.width.toFloat().coerceAtLeast(1f)
+                                val h = size.height.toFloat().coerceAtLeast(1f)
+                                onEraseAt(down.position.x / w, down.position.y / h)
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val p = event.changes.firstOrNull { it.id == down.id } ?: break
+                                    onEraseAt(p.position.x / w, p.position.y / h)
+                                    if (!p.pressed) break
+                                }
+                            }
+                        }
+                    }
+                }
+                .pointerInput(tool, safePage, pdfPath) {
+                    if (tool == Tool.None) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             scale = (scale * zoom).coerceIn(1f, 6f)
                             offsetX += pan.x
                             offsetY += pan.y
                         }
                     }
-                    .pointerInput(Unit) {
-                        detectTapGestures(onDoubleTap = { onTapToggleFullscreen() })
-                    },
-            )
+                },
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                canvasSize = Offset(size.width, size.height)
+                val w = size.width
+                val h = size.height
+                strokes.forEach { stroke -> drawStroke(stroke, w, h) }
+                if (activeStroke.size >= 2) {
+                    val tmp = Stroke(points = activeStroke, colorArgb = penColorArgb(tool))
+                    drawStroke(tmp, w, h)
+                }
+            }
         }
+
         Row(
             modifier = Modifier.fillMaxWidth().padding(8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -138,7 +210,50 @@ fun PdfViewer(
                     tint = if (invertColors) Color.White else Color.Black)
             }
         }
+
+        if (tool != Tool.None) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                contentAlignment = Alignment.TopEnd,
+            ) {
+                Text(
+                    when (tool) { Tool.Pen -> "Pen"; Tool.Eraser -> "Eraser"; else -> "" },
+                    color = if (invertColors) Color.White else Color.Black,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
+        }
     }
+}
+
+private fun penColorArgb(tool: Tool): Long = 0xFFEF4444L  // red
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStroke(
+    stroke: Stroke, w: Float, h: Float,
+) {
+    if (stroke.points.size < 2) return
+    val path = Path().apply {
+        val first = stroke.points.first()
+        moveTo(first.x * w, first.y * h)
+        for (i in 1 until stroke.points.size) {
+            val p = stroke.points[i]
+            lineTo(p.x * w, p.y * h)
+        }
+    }
+    drawPath(
+        path = path,
+        color = Color(stroke.colorArgb.toInt()),
+        style = DrawStroke(
+            width = stroke.widthPx,
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round,
+        ),
+    )
 }
 
 private fun renderPage(handle: PdfHandle, index: Int, invert: Boolean): Bitmap? {
