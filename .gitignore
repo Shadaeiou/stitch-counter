@@ -1,0 +1,27 @@
+# Gradle / Android build
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/.cxx/
+
+# Local config — never commit
+android/local.properties
+**/local.properties
+
+# Keystores — NEVER commit
+*.jks
+*.keystore
+keystore.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
