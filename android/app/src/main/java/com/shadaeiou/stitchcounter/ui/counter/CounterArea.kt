@@ -4,7 +4,10 @@ import androidx.compose.animation.Animatable
 import androidx.compose.animation.core.Animatable as FloatAnimatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -36,14 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -68,6 +69,7 @@ fun CounterArea(
     label: String,
     locked: Boolean,
     interactionsEnabled: Boolean,
+    backgroundArgb: Long,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
     onLabelChange: (String) -> Unit,
@@ -100,26 +102,13 @@ fun CounterArea(
 
     val moveCancelPx = with(density) { MOVE_CANCEL_DP.dp.toPx() }
     val pullTriggerPx = with(density) { PULL_TRIGGER_DP.dp.toPx() }
+    val backgroundColor = Color(backgroundArgb.toInt())
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(backgroundColor),
     ) {
-        IconButton(
-            onClick = onReset,
-            enabled = !locked && interactionsEnabled,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(4.dp),
-        ) {
-            Icon(
-                Icons.Default.RestartAlt,
-                contentDescription = "Reset counter",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-            )
-        }
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -130,101 +119,95 @@ fun CounterArea(
                     if (flash.value.alpha > 0f) drawRect(flash.value)
                 }
                 .pointerInput(gesturesActive) {
-                if (!gesturesActive) return@pointerInput
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    val startTime = System.currentTimeMillis()
-                    val startPos = down.position
-                    var hintFired = false
-                    var pullTracking = false
-                    var pressFired = false  // tap or long-press already resolved
+                    if (!gesturesActive) return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = true)
+                        val startTime = System.currentTimeMillis()
+                        val startPos = down.position
+                        var hintFired = false
+                        var pullTracking = false
+                        var pressFired = false  // tap or long-press already resolved
 
-                    while (true) {
-                        val elapsed = System.currentTimeMillis() - startTime
-                        val nextDeadline: Long = when {
-                            pullTracking || pressFired -> Long.MAX_VALUE
-                            !hintFired && elapsed < HINT_DELAY_MS -> HINT_DELAY_MS - elapsed
-                            elapsed < LONG_PRESS_MS -> LONG_PRESS_MS - elapsed
-                            else -> 0L
-                        }
-
-                        if (!pullTracking && !pressFired && nextDeadline <= 0L) {
-                            if (!hintFired) {
-                                hintFired = true
-                                hintVisible = true
-                                continue
+                        while (true) {
+                            val elapsed = System.currentTimeMillis() - startTime
+                            val nextDeadline: Long = when {
+                                pullTracking || pressFired -> Long.MAX_VALUE
+                                !hintFired && elapsed < HINT_DELAY_MS -> HINT_DELAY_MS - elapsed
+                                elapsed < LONG_PRESS_MS -> LONG_PRESS_MS - elapsed
+                                else -> 0L
                             }
-                            // Long-press fires
-                            haptics.heavy()
-                            if (currentCount <= 0) {
-                                shakeKey++
-                            } else {
-                                onDecrement()
-                                scope.launch {
-                                    flash.snapTo(FlashRed)
-                                    flash.animateTo(Color.Transparent, tween(FLASH_MS))
+
+                            if (!pullTracking && !pressFired && nextDeadline <= 0L) {
+                                if (!hintFired) {
+                                    hintFired = true
+                                    hintVisible = true
+                                    continue
                                 }
-                            }
-                            pressFired = true
-                            hintVisible = false
-                            // Continue loop waiting for lift; nextDeadline becomes MAX
-                            continue
-                        }
-
-                        val event = if (nextDeadline == Long.MAX_VALUE) awaitPointerEvent()
-                                    else withTimeoutOrNull(nextDeadline) { awaitPointerEvent() }
-                                        ?: continue
-
-                        val pointer = event.changes.firstOrNull { it.id == down.id }
-                        if (pointer == null || !pointer.pressed) {
-                            hintVisible = false
-                            // Lifted. If neither press nor pull resolved → it's a tap.
-                            if (!pressFired && !pullTracking) {
-                                val nowMs = System.currentTimeMillis()
-                                if (nowMs - lastTapAt >= TAP_DEBOUNCE_MS) {
-                                    lastTapAt = nowMs
-                                    haptics.light()
-                                    onIncrement()
+                                haptics.heavy()
+                                if (currentCount <= 0) {
+                                    shakeKey++
+                                } else {
+                                    onDecrement()
                                     scope.launch {
-                                        flash.snapTo(FlashGreen)
+                                        flash.snapTo(FlashRed)
                                         flash.animateTo(Color.Transparent, tween(FLASH_MS))
                                     }
                                 }
+                                pressFired = true
+                                hintVisible = false
+                                continue
                             }
-                            break
-                        }
 
-                        if (pressFired) continue  // just waiting for lift now
+                            val event = if (nextDeadline == Long.MAX_VALUE) awaitPointerEvent()
+                                        else withTimeoutOrNull(nextDeadline) { awaitPointerEvent() }
+                                            ?: continue
 
-                        val dx = pointer.position.x - startPos.x
-                        val dy = pointer.position.y - startPos.y
+                            val pointer = event.changes.firstOrNull { it.id == down.id }
+                            if (pointer == null || !pointer.pressed) {
+                                hintVisible = false
+                                if (!pressFired && !pullTracking) {
+                                    val nowMs = System.currentTimeMillis()
+                                    if (nowMs - lastTapAt >= TAP_DEBOUNCE_MS) {
+                                        lastTapAt = nowMs
+                                        haptics.light()
+                                        onIncrement()
+                                        scope.launch {
+                                            flash.snapTo(FlashGreen)
+                                            flash.animateTo(Color.Transparent, tween(FLASH_MS))
+                                        }
+                                    }
+                                }
+                                break
+                            }
 
-                        // Crossing the pull threshold (downward) at any time → fire pull.
-                        if (dy > pullTriggerPx) {
-                            hintVisible = false
-                            haptics.pull()
-                            onPullDown()
-                            pressFired = true  // suppress any further press resolution
-                            pullTracking = true
-                            continue
-                        }
+                            if (pressFired) continue
 
-                        val dist = sqrt(dx * dx + dy * dy)
-                        if (!pullTracking && dist > moveCancelPx) {
-                            val isPullTrajectory = dy > 0f && dy >= abs(dx)
-                            if (isPullTrajectory) {
-                                // Allow continued downward tracking toward the pull threshold.
+                            val dx = pointer.position.x - startPos.x
+                            val dy = pointer.position.y - startPos.y
+
+                            if (dy > pullTriggerPx) {
+                                hintVisible = false
+                                haptics.pull()
+                                onPullDown()
+                                pressFired = true
                                 pullTracking = true
-                                hintVisible = false
-                            } else {
-                                // Movement in a non-pull direction → cancel everything.
-                                hintVisible = false
-                                pressFired = true  // suppress tap on lift
+                                continue
+                            }
+
+                            val dist = sqrt(dx * dx + dy * dy)
+                            if (!pullTracking && dist > moveCancelPx) {
+                                val isPullTrajectory = dy > 0f && dy >= abs(dx)
+                                if (isPullTrajectory) {
+                                    pullTracking = true
+                                    hintVisible = false
+                                } else {
+                                    hintVisible = false
+                                    pressFired = true
+                                }
                             }
                         }
                     }
-                }
-            },
+                },
             contentAlignment = Alignment.Center,
         ) {
             Column(
@@ -235,7 +218,7 @@ fun CounterArea(
                 LabelEditor(
                     label = label,
                     editing = labelEditing,
-                    onStartEdit = { labelEditing = true },
+                    onStartEdit = { if (!locked) labelEditing = true },
                     onCommit = {
                         onLabelChange(it)
                         labelEditing = false
@@ -245,7 +228,7 @@ fun CounterArea(
                     Text(
                         text = count.toString(),
                         style = MaterialTheme.typography.displayLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = Color.White,
                         textAlign = TextAlign.Center,
                     )
                     if (hintVisible) {
@@ -257,6 +240,27 @@ fun CounterArea(
                     }
                 }
             }
+        }
+
+        // Reset button declared last so it sits above the gesture box and
+        // receives taps first; clickable consumes the down so the gesture
+        // box's awaitFirstDown(requireUnconsumed=true) skips it.
+        IconButton(
+            onClick = onReset,
+            enabled = !locked && interactionsEnabled,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(8.dp)
+                .border(
+                    BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
+                    CircleShape,
+                ),
+        ) {
+            Icon(
+                Icons.Default.RestartAlt,
+                contentDescription = "Reset counter",
+                tint = Color.White.copy(alpha = 0.85f),
+            )
         }
     }
 }
@@ -276,42 +280,26 @@ private fun LabelEditor(
             singleLine = true,
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             textStyle = LocalTextStyle.current.copy(
-                color = MaterialTheme.colorScheme.onBackground,
+                color = Color.White,
                 textAlign = TextAlign.Center,
+                fontSize = MaterialTheme.typography.titleLarge.fontSize,
             ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onCommit(draft.trim()) }),
-            modifier = Modifier.padding(bottom = 12.dp),
+            modifier = Modifier.padding(bottom = 16.dp),
         )
     } else {
         val display = label.ifBlank { "Tap to set label" }
-        val color = if (label.isBlank())
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-        else MaterialTheme.colorScheme.onSurface
+        val color =
+            if (label.isBlank()) Color.White.copy(alpha = 0.5f)
+            else Color.White
         Text(
             text = display,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.titleLarge,
             color = color,
             modifier = Modifier
-                .padding(bottom = 12.dp)
-                .pointerInput(Unit) {
-                    awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
-                        // Wait for lift, then enter edit mode (avoid stealing counter taps)
-                        var moved = false
-                        while (true) {
-                            val ev = awaitPointerEvent()
-                            val change = ev.changes.firstOrNull() ?: break
-                            if (!change.pressed) {
-                                if (!moved) onStartEdit()
-                                break
-                            }
-                            val d = change.position - change.previousPosition
-                            if (d.getDistance() > 10f) moved = true
-                        }
-                    }
-                },
+                .padding(bottom = 16.dp)
+                .clickable(onClick = onStartEdit),
         )
     }
 }
-

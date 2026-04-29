@@ -1,5 +1,8 @@
 package com.shadaeiou.stitchcounter.ui.settings
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,7 +11,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,9 +38,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.shadaeiou.stitchcounter.BuildConfig
+import com.shadaeiou.stitchcounter.ui.theme.CounterBackgrounds
 import com.shadaeiou.stitchcounter.update.DownloadResult
 import com.shadaeiou.stitchcounter.update.UpdateCheckResult
 import com.shadaeiou.stitchcounter.update.UpdateInfo
@@ -46,8 +55,10 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     autoUpdate: Boolean,
     volumeKeys: Boolean,
+    counterBackgroundArgb: Long,
     onAutoUpdateChange: (Boolean) -> Unit,
     onVolumeKeysChange: (Boolean) -> Unit,
+    onCounterBackgroundChange: (Long) -> Unit,
     onBack: () -> Unit,
     repoOwner: String,
     repoName: String,
@@ -88,6 +99,14 @@ fun SettingsScreen(
                 description = "Up = +1, Down = -1",
                 checked = volumeKeys,
                 onCheckedChange = onVolumeKeysChange,
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Text("Counter background", style = MaterialTheme.typography.titleMedium)
+            CounterBackgroundPicker(
+                selectedArgb = counterBackgroundArgb,
+                onSelect = onCounterBackgroundChange,
             )
 
             Spacer(Modifier.height(16.dp))
@@ -144,6 +163,37 @@ fun SettingsScreen(
             },
             onDismiss = { pending = null },
         )
+    }
+}
+
+@Composable
+private fun CounterBackgroundPicker(
+    selectedArgb: Long,
+    onSelect: (Long) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        for (choice in CounterBackgrounds) {
+            val isSelected = choice.argb == selectedArgb
+            val borderColor =
+                if (isSelected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+            val borderWidth = if (isSelected) 3.dp else 1.dp
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color(choice.argb.toInt()))
+                    .border(BorderStroke(borderWidth, borderColor), CircleShape)
+                    .selectable(
+                        selected = isSelected,
+                        onClick = { onSelect(choice.argb) },
+                    ),
+            )
+        }
     }
 }
 

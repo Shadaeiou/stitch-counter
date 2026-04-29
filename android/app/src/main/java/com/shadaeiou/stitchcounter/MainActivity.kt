@@ -92,6 +92,9 @@ private fun AppRoot(activityVm: CounterViewModel) {
 
     val autoUpdate by prefs.autoUpdateFlow.collectAsState(initial = true)
     val volumeKeys by prefs.volumeKeysFlow.collectAsState(initial = true)
+    val counterBg by prefs.counterBackgroundFlow.collectAsState(
+        initial = com.shadaeiou.stitchcounter.data.prefs.UserPrefs.DEFAULT_COUNTER_BG
+    )
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var pending by remember { mutableStateOf<UpdateInfo?>(null) }
@@ -107,6 +110,7 @@ private fun AppRoot(activityVm: CounterViewModel) {
     when (screen) {
         Screen.Main -> MainScreen(
             vm = activityVm,
+            counterBackgroundArgb = counterBg,
             onOpenSettings = { screen = Screen.Settings },
         )
         Screen.Settings -> {
@@ -114,8 +118,10 @@ private fun AppRoot(activityVm: CounterViewModel) {
             SettingsScreen(
                 autoUpdate = autoUpdate,
                 volumeKeys = volumeKeys,
+                counterBackgroundArgb = counterBg,
                 onAutoUpdateChange = { v -> scope.launch { prefs.setAutoUpdate(v) } },
                 onVolumeKeysChange = { v -> scope.launch { prefs.setVolumeKeys(v) } },
+                onCounterBackgroundChange = { v -> scope.launch { prefs.setCounterBackground(v) } },
                 onBack = { screen = Screen.Main },
                 repoOwner = REPO_OWNER,
                 repoName = REPO_NAME,

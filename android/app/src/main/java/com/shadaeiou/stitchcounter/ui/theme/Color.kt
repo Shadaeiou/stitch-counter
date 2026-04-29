@@ -11,3 +11,14 @@ val Muted = Color(0xFF6B7280)
 
 val FlashGreen = Color(0x6622C55E)
 val FlashRed = Color(0x66EF4444)
+
+data class CounterBgChoice(val label: String, val argb: Long)
+
+val CounterBackgrounds: List<CounterBgChoice> = listOf(
+    CounterBgChoice("Black", 0xFF0A0A0AL),
+    CounterBgChoice("Charcoal", 0xFF1F1F1FL),
+    CounterBgChoice("Navy", 0xFF0F1729L),
+    CounterBgChoice("Forest", 0xFF0A1F0FL),
+    CounterBgChoice("Plum", 0xFF1A0F1FL),
+    CounterBgChoice("Wine", 0xFF1F0A0AL),
+)

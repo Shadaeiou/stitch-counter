@@ -15,10 +15,14 @@ class UserPrefs(private val context: Context) {
     private val keyAutoUpdate = booleanPreferencesKey("auto_update_enabled")
     private val keyVolumeKeys = booleanPreferencesKey("volume_keys_enabled")
     private val keyCurrentProject = longPreferencesKey("current_project_id")
+    private val keyCounterBg = longPreferencesKey("counter_bg_argb")
 
     val autoUpdateFlow: Flow<Boolean> = context.dataStore.data.map { it[keyAutoUpdate] ?: true }
     val volumeKeysFlow: Flow<Boolean> = context.dataStore.data.map { it[keyVolumeKeys] ?: true }
     val currentProjectIdFlow: Flow<Long> = context.dataStore.data.map { it[keyCurrentProject] ?: 0L }
+    val counterBackgroundFlow: Flow<Long> = context.dataStore.data.map {
+        it[keyCounterBg] ?: DEFAULT_COUNTER_BG
+    }
 
     suspend fun setAutoUpdate(value: Boolean) {
         context.dataStore.edit { it[keyAutoUpdate] = value }
@@ -28,5 +32,12 @@ class UserPrefs(private val context: Context) {
     }
     suspend fun setCurrentProjectId(id: Long) {
         context.dataStore.edit { it[keyCurrentProject] = id }
+    }
+    suspend fun setCounterBackground(argb: Long) {
+        context.dataStore.edit { it[keyCounterBg] = argb }
+    }
+
+    companion object {
+        const val DEFAULT_COUNTER_BG: Long = 0xFF0A0A0AL
     }
 }

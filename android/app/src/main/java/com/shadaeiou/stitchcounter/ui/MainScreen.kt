@@ -7,10 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +37,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(
     vm: CounterViewModel,
+    counterBackgroundArgb: Long,
     onOpenSettings: () -> Unit,
 ) {
     val project by vm.project.collectAsStateWithLifecycle()
@@ -47,6 +52,7 @@ fun MainScreen(
     var historyVisible by remember { mutableStateOf(false) }
     var pdfFullscreen by remember { mutableStateOf(false) }
     var notesVisible by remember { mutableStateOf(false) }
+    var confirmRemovePdf by remember { mutableStateOf(false) }
 
     val pdfPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -89,6 +95,7 @@ fun MainScreen(
                         label = project?.label.orEmpty(),
                         locked = locked,
                         interactionsEnabled = tool == Tool.None,
+                        backgroundArgb = counterBackgroundArgb,
                         onIncrement = vm::increment,
                         onDecrement = vm::decrement,
                         onLabelChange = vm::setLabel,
@@ -119,10 +126,7 @@ fun MainScreen(
                     onAddStroke = { points -> vm.addStroke(points, colorArgb = 0xFFEF4444L, widthPx = 6f) },
                     onEraseAt = { x, y -> vm.eraseAt(x, y, toleranceNorm = 0.025f) },
                     onTapToggleFullscreen = { pdfFullscreen = !pdfFullscreen },
-                    onRemovePdf = {
-                        pdfFullscreen = false
-                        vm.setPdfPath(null)
-                    },
+                    onRemovePdf = { confirmRemovePdf = true },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -146,6 +150,24 @@ fun MainScreen(
             initialText = project?.notes.orEmpty(),
             onDismiss = { notesVisible = false },
             onSave = { vm.setNotes(it) },
+        )
+    }
+
+    if (confirmRemovePdf) {
+        AlertDialog(
+            onDismissRequest = { confirmRemovePdf = false },
+            title = { Text("Remove PDF?") },
+            text = { Text("This will remove the loaded PDF and clear its annotations from the screen.") },
+            confirmButton = {
+                Button(onClick = {
+                    confirmRemovePdf = false
+                    pdfFullscreen = false
+                    vm.setPdfPath(null)
+                }) { Text("Remove") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmRemovePdf = false }) { Text("Cancel") }
+            },
         )
     }
 }
