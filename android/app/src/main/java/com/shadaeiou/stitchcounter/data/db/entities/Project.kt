@@ -17,6 +17,8 @@ data class Project(
     val notes: String = "",
     // Repeating K/P pattern (e.g. "KKP"). Empty disables the indicator.
     val knitPattern: String = "",
+    // HTML-formatted pattern imported from a URL. Empty = none saved.
+    val patternHtml: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 )

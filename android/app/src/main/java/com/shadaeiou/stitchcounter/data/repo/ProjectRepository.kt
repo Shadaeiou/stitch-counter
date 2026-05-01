@@ -90,6 +90,12 @@ class ProjectRepository(
         return updated
     }
 
+    suspend fun setPatternHtml(project: Project, html: String): Project {
+        val updated = project.copy(patternHtml = html, updatedAt = System.currentTimeMillis())
+        projectDao.update(updated)
+        return updated
+    }
+
     suspend fun saveStrokes(projectId: Long, page: Int, strokes: List<Stroke>) {
         annotationDao.upsert(PageAnnotation(projectId = projectId, page = page, strokesJson = strokes.toJson()))
     }

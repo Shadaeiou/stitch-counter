@@ -56,6 +56,7 @@ fun MainScreen(
     counterBackgroundArgb: Long,
     onOpenSettings: () -> Unit,
     onOpenNotes: () -> Unit,
+    onOpenPattern: () -> Unit,
 ) {
     val project by vm.project.collectAsStateWithLifecycle()
     val locked by vm.locked.collectAsStateWithLifecycle()
@@ -201,6 +202,7 @@ fun MainScreen(
                 onUploadPdf = { pdfPicker.launch(arrayOf("application/pdf")) },
                 onTogglePdfHidden = { pdfHidden = !pdfHidden },
                 onOpenNotes = onOpenNotes,
+                onOpenPattern = onOpenPattern,
                 onToggleLock = vm::toggleLock,
                 onOpenSettings = onOpenSettings,
             )

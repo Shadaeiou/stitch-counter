@@ -30,7 +30,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
@@ -53,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -62,10 +62,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke as DrawStroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.shadaeiou.stitchcounter.R
 import com.shadaeiou.stitchcounter.ui.theme.PenColors
 import com.shadaeiou.stitchcounter.viewmodel.Tool
 import java.io.File
+import kotlin.math.hypot
 
 private class PdfHandle(file: File) : AutoCloseable {
     private val pfd: ParcelFileDescriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
@@ -183,6 +186,7 @@ fun PdfViewer(
                             detectTapGestures(onDoubleTap = { onTapToggleFullscreen() })
                         }
                         Tool.Pen -> {
+                            // 1-finger: draw stroke. 2-finger: pinch-zoom + pan.
                             awaitEachGesture {
                                 val down = awaitFirstDown(requireUnconsumed = true)
                                 onPenDrawStart()
@@ -191,30 +195,97 @@ fun PdfViewer(
                                 val pts = mutableListOf<StrokePoint>()
                                 pts += toPagePoint(down.position.x, down.position.y, w, h, scale, offsetX, offsetY)
                                 activeStroke = pts.toList()
+                                var isDrawing = true
+                                var prevCentroid = down.position
+                                var prevSpan = 0f
                                 while (true) {
                                     val event = awaitPointerEvent()
-                                    val p = event.changes.firstOrNull { it.id == down.id } ?: break
-                                    pts += toPagePoint(p.position.x, p.position.y, w, h, scale, offsetX, offsetY)
-                                    activeStroke = pts.toList()
-                                    if (!p.pressed) break
+                                    val pressed = event.changes.filter { it.pressed }
+                                    when {
+                                        pressed.size >= 2 -> {
+                                            if (isDrawing) {
+                                                pts.clear()
+                                                activeStroke = emptyList()
+                                                isDrawing = false
+                                            }
+                                            val centroid = pressed
+                                                .fold(Offset.Zero) { acc, c -> acc + c.position } /
+                                                pressed.size.toFloat()
+                                            val span = hypot(
+                                                pressed[0].position.x - pressed[1].position.x,
+                                                pressed[0].position.y - pressed[1].position.y,
+                                            )
+                                            if (prevSpan > 0f && span > 0f) {
+                                                scale = (scale * (span / prevSpan)).coerceIn(1f, 6f)
+                                            }
+                                            val delta = centroid - prevCentroid
+                                            offsetX += delta.x
+                                            offsetY += delta.y
+                                            prevCentroid = centroid
+                                            prevSpan = span
+                                        }
+                                        pressed.size == 1 && isDrawing -> {
+                                            val p = pressed.first()
+                                            pts += toPagePoint(p.position.x, p.position.y, w, h, scale, offsetX, offsetY)
+                                            activeStroke = pts.toList()
+                                            prevCentroid = p.position
+                                        }
+                                        pressed.isEmpty() -> break
+                                        else -> {
+                                            prevCentroid = pressed.first().position
+                                            prevSpan = 0f
+                                        }
+                                    }
                                 }
-                                if (pts.size >= 2) onAddStroke(pts.toList())
+                                if (isDrawing && pts.size >= 2) onAddStroke(pts.toList())
                                 activeStroke = emptyList()
                             }
                         }
                         Tool.Eraser -> {
+                            // 1-finger: erase. 2-finger: pinch-zoom + pan.
                             awaitEachGesture {
                                 val down = awaitFirstDown(requireUnconsumed = true)
                                 val w = size.width.toFloat().coerceAtLeast(1f)
                                 val h = size.height.toFloat().coerceAtLeast(1f)
                                 val p0 = toPagePoint(down.position.x, down.position.y, w, h, scale, offsetX, offsetY)
                                 onEraseAt(p0.x, p0.y)
+                                var isErasing = true
+                                var prevCentroid = down.position
+                                var prevSpan = 0f
                                 while (true) {
                                     val event = awaitPointerEvent()
-                                    val p = event.changes.firstOrNull { it.id == down.id } ?: break
-                                    val pp = toPagePoint(p.position.x, p.position.y, w, h, scale, offsetX, offsetY)
-                                    onEraseAt(pp.x, pp.y)
-                                    if (!p.pressed) break
+                                    val pressed = event.changes.filter { it.pressed }
+                                    when {
+                                        pressed.size >= 2 -> {
+                                            isErasing = false
+                                            val centroid = pressed
+                                                .fold(Offset.Zero) { acc, c -> acc + c.position } /
+                                                pressed.size.toFloat()
+                                            val span = hypot(
+                                                pressed[0].position.x - pressed[1].position.x,
+                                                pressed[0].position.y - pressed[1].position.y,
+                                            )
+                                            if (prevSpan > 0f && span > 0f) {
+                                                scale = (scale * (span / prevSpan)).coerceIn(1f, 6f)
+                                            }
+                                            val delta = centroid - prevCentroid
+                                            offsetX += delta.x
+                                            offsetY += delta.y
+                                            prevCentroid = centroid
+                                            prevSpan = span
+                                        }
+                                        pressed.size == 1 && isErasing -> {
+                                            val p = pressed.first()
+                                            val pp = toPagePoint(p.position.x, p.position.y, w, h, scale, offsetX, offsetY)
+                                            onEraseAt(pp.x, pp.y)
+                                            prevCentroid = p.position
+                                        }
+                                        pressed.isEmpty() -> break
+                                        else -> {
+                                            prevCentroid = pressed.first().position
+                                            prevSpan = 0f
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -251,9 +322,6 @@ fun PdfViewer(
         }
 
         // Overlay toolbar in the upper-right corner of the PDF area.
-        // PdfViewer is only mounted when a PDF is loaded and showing, so
-        // visibility (hide-when-no-pdf, hide-when-pdf-hidden) is handled
-        // implicitly by callers.
         PdfToolbar(
             activeTool = tool,
             inverted = invertColors,
@@ -277,8 +345,6 @@ fun PdfViewer(
                 onDarkBackground = invertColors,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    // Sits below the PdfToolbar overlay (which is ~48dp tall
-                    // plus its 8dp padding).
                     .padding(top = 72.dp, end = 12.dp),
             )
         } else if (tool == Tool.Eraser) {
@@ -349,7 +415,7 @@ private fun PdfToolbar(
         }
         IconButton(onClick = onSelectEraser) {
             Icon(
-                Icons.Default.AutoFixHigh,
+                painter = painterResource(R.drawable.ic_eraser),
                 contentDescription = "Eraser",
                 tint = if (activeTool == Tool.Eraser) activeTint else idleTint,
             )

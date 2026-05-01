@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
 import com.shadaeiou.stitchcounter.ui.MainScreen
 import com.shadaeiou.stitchcounter.ui.notes.NotesScreen
+import com.shadaeiou.stitchcounter.ui.pattern.PatternScreen
 import com.shadaeiou.stitchcounter.ui.settings.SettingsScreen
 import com.shadaeiou.stitchcounter.ui.theme.StitchCounterTheme
 import com.shadaeiou.stitchcounter.update.DownloadResult
@@ -116,6 +117,7 @@ private fun AppRoot(activityVm: CounterViewModel) {
             counterBackgroundArgb = counterBg,
             onOpenSettings = { screen = Screen.Settings },
             onOpenNotes = { screen = Screen.Notes },
+            onOpenPattern = { screen = Screen.Pattern },
         )
         Screen.Notes -> {
             BackHandler { screen = Screen.Main }
@@ -140,6 +142,13 @@ private fun AppRoot(activityVm: CounterViewModel) {
                 onBack = { screen = Screen.Main },
                 repoOwner = REPO_OWNER,
                 repoName = REPO_NAME,
+            )
+        }
+        Screen.Pattern -> {
+            BackHandler { screen = Screen.Main }
+            PatternScreen(
+                vm = activityVm,
+                onBack = { screen = Screen.Main },
             )
         }
     }
@@ -172,4 +181,4 @@ private fun AppRoot(activityVm: CounterViewModel) {
     }
 }
 
-private enum class Screen { Main, Notes, Settings }
+private enum class Screen { Main, Notes, Settings, Pattern }

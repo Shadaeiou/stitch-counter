@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Notes
@@ -30,6 +31,7 @@ fun BottomToolbar(
     onUploadPdf: () -> Unit,
     onTogglePdfHidden: () -> Unit,
     onOpenNotes: () -> Unit,
+    onOpenPattern: () -> Unit,
     onToggleLock: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -63,6 +65,10 @@ fun BottomToolbar(
         }
         IconButton(onClick = onOpenNotes) {
             Icon(Icons.Default.Notes, contentDescription = "Notes")
+        }
+        // Pattern editor — always visible so users can import & view patterns.
+        IconButton(onClick = onOpenPattern) {
+            Icon(Icons.Default.Article, contentDescription = "Pattern")
         }
         IconButton(onClick = onToggleLock) {
             Icon(
