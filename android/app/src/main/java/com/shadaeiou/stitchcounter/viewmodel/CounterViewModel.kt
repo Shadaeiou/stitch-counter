@@ -73,6 +73,10 @@ class CounterViewModel(
         .map { it?.knitPattern.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
+    val patternHtml: StateFlow<String> = _project
+        .map { it?.patternHtml.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+
     val strokes: StateFlow<List<Stroke>> = _project
         .map { p -> p?.let { it.id to it.currentPage } }
         .distinctUntilChanged()
@@ -164,6 +168,11 @@ class CounterViewModel(
     fun setKnitPattern(pattern: String) = viewModelScope.launch {
         val p = _project.value ?: return@launch
         _project.value = repository.setKnitPattern(p, pattern)
+    }
+
+    fun setPatternHtml(html: String) = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        _project.value = repository.setPatternHtml(p, html)
     }
 
     fun toggleLock() {
