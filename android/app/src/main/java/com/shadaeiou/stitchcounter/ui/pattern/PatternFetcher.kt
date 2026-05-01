@@ -134,7 +134,7 @@ object PatternFetcher {
         text = text.replace(Regex("(\\n[ \t]*)+"), "\n")
         text = text.replace(Regex("\n{3,}"), "\n\n")
         // Isolate each photo marker as its own paragraph
-        text = text.replace(Regex("\n?(\[PHOTO:[^\]]+\])\n?"), "\n\n$1\n\n")
+        text = text.replace(Regex("""\n?(\[PHOTO:[^\]]+\])\n?"""), "\n\n$1\n\n")
         text = text.replace(Regex("\n{3,}"), "\n\n")
         return text.trim()
     }

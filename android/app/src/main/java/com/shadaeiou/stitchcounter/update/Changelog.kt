@@ -13,6 +13,28 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 27,
+        versionName = "0.1.27",
+        notes = listOf(
+            "Fix release build: PatternFetcher photo-marker regex used invalid Kotlin string escapes (\\[, \\]). Switched the pattern to a raw string literal so compileReleaseKotlin no longer fails.",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 26,
+        versionName = "0.1.26",
+        notes = listOf(
+            "Removed the Eastern time clock from the counter screen.",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 25,
+        versionName = "0.1.25",
+        notes = listOf(
+            "Pattern import now shows photo thumbnails inline.",
+            "Counter screen briefly displayed an Eastern time clock (removed in build 26).",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 24,
         versionName = "0.1.24",
         notes = listOf(
