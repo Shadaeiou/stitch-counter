@@ -34,32 +34,27 @@ object PatternFetcher {
                 throw Exception("PDF files are not supported here. Use 'Upload PDF' to view PDFs with annotations.")
             }
             val cleaned = removeCommentSections(body)
-            val plainText = extractTextFromHtml(cleaned)
-            val withoutTrailingComments = trimTextComments(plainText)
+            val mixed = extractMixedContent(cleaned)
+            val withoutTrailingComments = trimTextComments(mixed)
             findPatternStart(withoutTrailingComments)
         }
     }
 
     // ── HTML-level comment removal ────────────────────────────────────────────
-    // Finds the first HTML element whose id or class strongly indicates a
-    // comment section and discards everything from that point onward.
 
     private val COMMENT_SECTION_PATTERNS = listOf(
-        // id-based (most reliable)
         Regex("""<(?:div|section|aside|article|ol|ul)[^>]+\bid\s*=\s*["'][^"']*\bcomments?\b[^"']*["']""",
             RegexOption.IGNORE_CASE),
         Regex("""<(?:div|section)[^>]+\bid\s*=\s*["']respond["']""",
             RegexOption.IGNORE_CASE),
         Regex("""<(?:div|section)[^>]+\bid\s*=\s*["']discussion["']""",
             RegexOption.IGNORE_CASE),
-        // class-based
         Regex("""<(?:div|section|aside|ol|ul)[^>]+\bclass\s*=\s*["'][^"']*\bcomments?(?:-section|-area|-list|-block|-wrap(?:per)?)?\b[^"']*["']""",
             RegexOption.IGNORE_CASE),
         Regex("""<(?:div|section)[^>]+\bclass\s*=\s*["'][^"']*\bdiscussion\b[^"']*["']""",
             RegexOption.IGNORE_CASE),
         Regex("""<(?:div|section)[^>]+\bclass\s*=\s*["'][^"']*\bcomment-respond\b[^"']*["']""",
             RegexOption.IGNORE_CASE),
-        // Disqus embed
         Regex("""<div[^>]+\bid\s*=\s*["']disqus_thread["']""",
             RegexOption.IGNORE_CASE),
     )
@@ -74,8 +69,6 @@ object PatternFetcher {
     }
 
     // ── Plain-text-level comment trimming ────────────────────────────────────
-    // Fallback: after tag-stripping, look for text phrases that mark the start
-    // of the reader-comment section and drop everything after them.
 
     private val TEXT_COMMENT_MARKERS = listOf(
         Regex("""(?im)^[ \t]*Leave (a )?[Rr]eply\b"""),
@@ -99,48 +92,54 @@ object PatternFetcher {
         return if (earliest < text.length) text.substring(0, earliest).trim() else text
     }
 
-    // ── HTML → plain text ─────────────────────────────────────────────────────
+    // ── HTML → mixed content (text + photo markers) ───────────────────────────
+    // Extracts text while preserving absolute-URL images as [PHOTO:url] tokens
+    // so they can be re-inserted as thumbnails in the final HTML.
 
-    private fun extractTextFromHtml(html: String): String {
+    private fun extractMixedContent(html: String): String {
         var text = html
-        // Remove <script> and <style> blocks entirely
+        // Remove scripts and styles
         text = text.replace(
-            Regex("<script[^>]*>.*?</script>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)),
-            " ",
-        )
+            Regex("<script[^>]*>.*?</script>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)), " ")
         text = text.replace(
-            Regex("<style[^>]*>.*?</style>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)),
-            " ",
-        )
-        // Replace block-level tags with line breaks
+            Regex("<style[^>]*>.*?</style>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)), " ")
+
+        // Capture img src before tag-stripping
+        text = text.replace(Regex("<img\\b[^>]*>", RegexOption.IGNORE_CASE)) { match ->
+            val srcMatch = Regex("""src\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+                .find(match.value)
+            val src = srcMatch?.groupValues?.get(1) ?: return@replace ""
+            val absoluteSrc = when {
+                src.startsWith("https://") || src.startsWith("http://") -> src
+                src.startsWith("//") -> "https:$src"
+                else -> return@replace ""
+            }
+            "\n[PHOTO:$absoluteSrc]\n"
+        }
+
+        // Block elements → newlines
         text = text.replace(
             Regex("</?(?:p|div|li|h[1-6]|tr|blockquote|pre|section|article|header|footer|main)[^>]*>",
-                RegexOption.IGNORE_CASE),
-            "\n",
-        )
+                RegexOption.IGNORE_CASE), "\n")
         text = text.replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
-        // Strip remaining HTML tags
+        // Strip remaining tags
         text = text.replace(Regex("<[^>]+>"), "")
-        // Decode common HTML entities
+        // Decode entities
         text = text
-            .replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", "\"")
-            .replace("&#39;", "'")
-            .replace("&apos;", "'")
-            .replace("&nbsp;", " ")
-            .replace(Regex("&#x?[0-9a-fA-F]+;"), "")
+            .replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+            .replace("&quot;", "\"").replace("&#39;", "'").replace("&apos;", "'")
+            .replace("&nbsp;", " ").replace(Regex("&#x?[0-9a-fA-F]+;"), "")
         // Normalise whitespace
         text = text.replace(Regex("[ \t]+"), " ")
         text = text.replace(Regex("(\\n[ \t]*)+"), "\n")
+        text = text.replace(Regex("\n{3,}"), "\n\n")
+        // Isolate each photo marker as its own paragraph
+        text = text.replace(Regex("\n?(\[PHOTO:[^\]]+\])\n?"), "\n\n$1\n\n")
         text = text.replace(Regex("\n{3,}"), "\n\n")
         return text.trim()
     }
 
     // ── Pattern-start heuristic ───────────────────────────────────────────────
-    // Trim any blog intro / copyright preamble that comes before the actual
-    // knit / crochet instructions.
 
     private fun findPatternStart(text: String): String {
         val markers = listOf(
@@ -168,16 +167,22 @@ object PatternFetcher {
     }
 }
 
-// Convert plain text to simple HTML paragraphs for the editor.
+// Convert mixed text (with [PHOTO:url] markers) to editor HTML.
+// Text paragraphs are HTML-escaped; photo markers become tappable thumbnails.
 fun plainTextToHtml(text: String): String {
-    val escaped = text
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    return escaped
-        .split("\n\n")
+    val photoMarker = Regex("""^\[PHOTO:(.+)\]$""")
+    return text.split("\n\n")
         .filter { it.isNotBlank() }
         .joinToString("") { para ->
-            "<p>" + para.replace("\n", "<br>") + "</p>"
+            val trimmed = para.trim()
+            val m = photoMarker.matchEntire(trimmed)
+            if (m != null) {
+                val url = m.groupValues[1]
+                """<div class="pattern-photo"><a href="$url"><img class="pattern-img" src="$url" alt=""></a></div>"""
+            } else {
+                val escaped = trimmed
+                    .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                "<p>${escaped.replace("\n", "<br>")}</p>"
+            }
         }
 }

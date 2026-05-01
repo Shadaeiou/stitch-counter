@@ -1,6 +1,9 @@
 package com.shadaeiou.stitchcounter.ui.pattern
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
@@ -52,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,17 +68,15 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-// Bright highlight colour options shown in the toolbar.
 private val HIGHLIGHT_COLORS = listOf(
-    Color(0xFFFFFF00) to "#FFFF00",   // yellow
-    Color(0xFF90EE90) to "#90EE90",   // light green
-    Color(0xFF00FFFF) to "#00FFFF",   // cyan
-    Color(0xFFFF69B4) to "#FF69B4",   // hot pink
-    Color(0xFFFFA500) to "#FFA500",   // orange
-    Color(0xFFADD8E6) to "#ADD8E6",   // light blue
+    Color(0xFFFFFF00) to "#FFFF00",
+    Color(0xFF90EE90) to "#90EE90",
+    Color(0xFF00FFFF) to "#00FFFF",
+    Color(0xFFFF69B4) to "#FF69B4",
+    Color(0xFFFFA500) to "#FFA500",
+    Color(0xFFADD8E6) to "#ADD8E6",
 )
 
-// HTML shell loaded into the WebView.
 private val EDITOR_HTML = """
 <!DOCTYPE html>
 <html>
@@ -82,42 +84,45 @@ private val EDITOR_HTML = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: #1a1a1a;
-    color: #f0f0f0;
-    font-family: sans-serif;
-    font-size: 16px;
-  }
+  body { background: #1a1a1a; color: #f0f0f0; font-family: sans-serif; font-size: 16px; }
   #editor {
-    min-height: 100vh;
-    padding: 12px;
-    outline: none;
-    word-break: break-word;
-    line-height: 1.7;
-    caret-color: #22c55e;
+    min-height: 100vh; padding: 12px; outline: none;
+    word-break: break-word; line-height: 1.7; caret-color: #22c55e;
   }
   #editor:empty:before {
-    content: "Pattern text will appear here after fetching a URL.  You can also type or paste directly.";
-    color: #666;
-    display: block;
+    content: "Pattern text will appear here after fetching a URL. You can also type or paste directly.";
+    color: #666; display: block;
   }
   ul, ol { padding-left: 24px; }
   li { margin: 3px 0; }
+  .pattern-photo { text-align: center; margin: 12px 0; }
+  .pattern-photo a { display: inline-block; }
+  .pattern-img {
+    max-width: 100%; height: auto; border-radius: 6px;
+    border: 1px solid #333; cursor: pointer; display: block; margin: 0 auto;
+  }
 </style>
 </head>
 <body>
 <div id="editor" contenteditable="true"></div>
 <script>
-function setContent(html) {
-  document.getElementById('editor').innerHTML = html;
-}
-function getContent() {
-  return document.getElementById('editor').innerHTML;
-}
+function setContent(html) { document.getElementById('editor').innerHTML = html; }
+function getContent() { return document.getElementById('editor').innerHTML; }
 function execCmd(cmd, val) {
   document.execCommand(cmd, false, val != null ? val : null);
   document.getElementById('editor').focus();
 }
+// Tap on a photo thumbnail opens it in the system browser via the Android bridge.
+document.getElementById('editor').addEventListener('click', function(e) {
+  var target = e.target;
+  if (target.tagName === 'IMG') {
+    var anchor = target.closest('a');
+    if (anchor && anchor.href && typeof Android !== 'undefined') {
+      e.preventDefault();
+      Android.openUrl(anchor.href);
+    }
+  }
+});
 </script>
 </body>
 </html>
@@ -132,17 +137,16 @@ fun PatternScreen(
 ) {
     val savedPattern by vm.patternHtml.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     var urlInput by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var webViewReady by remember { mutableStateOf(false) }
 
-    val bridge = remember { EditorBridge() }
+    val bridge = remember { EditorBridge(context) }
 
-    // Inject saved pattern once the WebView has finished loading.
     LaunchedEffect(webViewReady, savedPattern) {
         if (webViewReady && savedPattern.isNotEmpty()) {
             val jsonEncoded = Json.encodeToString(savedPattern)
@@ -156,14 +160,11 @@ fun PatternScreen(
         isLoading = true
         errorMessage = null
         scope.launch {
-            val result = withContext(Dispatchers.IO) {
-                PatternFetcher.fetchPatternFromUrl(url)
-            }
+            val result = withContext(Dispatchers.IO) { PatternFetcher.fetchPatternFromUrl(url) }
             isLoading = false
             if (result.isSuccess) {
                 val html = plainTextToHtml(result.getOrThrow())
-                val jsonEncoded = Json.encodeToString(html)
-                webViewRef?.evaluateJavascript("setContent($jsonEncoded)", null)
+                webViewRef?.evaluateJavascript("setContent(${Json.encodeToString(html)})", null)
             } else {
                 errorMessage = result.exceptionOrNull()?.message ?: "Failed to fetch URL"
             }
@@ -176,9 +177,7 @@ fun PatternScreen(
             onBack()
         }
         webViewRef?.evaluateJavascript(
-            "Android.receiveContent(document.getElementById('editor').innerHTML)",
-            null,
-        )
+            "Android.receiveContent(document.getElementById('editor').innerHTML)", null)
     }
 
     Scaffold(
@@ -201,15 +200,11 @@ fun PatternScreen(
         },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
         ) {
             // ── URL import row ───────────────────────────────────────────────
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -220,18 +215,9 @@ fun PatternScreen(
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                 )
-                IconButton(
-                    onClick = { fetchUrl() },
-                    enabled = !isLoading && urlInput.isNotBlank(),
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        Text("Go", style = MaterialTheme.typography.labelLarge)
-                    }
+                IconButton(onClick = { fetchUrl() }, enabled = !isLoading && urlInput.isNotBlank()) {
+                    if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else Text("Go", style = MaterialTheme.typography.labelLarge)
                 }
             }
 
@@ -257,19 +243,21 @@ fun PatternScreen(
                     WebView(ctx).also { wv ->
                         wv.settings.javaScriptEnabled = true
                         wv.settings.domStorageEnabled = true
+                        // Use a placeholder base URL so the WebView loads external images.
                         wv.addJavascriptInterface(bridge, "Android")
                         wv.webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 webViewReady = true
                             }
                         }
-                        wv.loadDataWithBaseURL(null, EDITOR_HTML, "text/html", "UTF-8", null)
+                        wv.loadDataWithBaseURL(
+                            "https://stitchcounter.placeholder/",
+                            EDITOR_HTML, "text/html", "UTF-8", null,
+                        )
                         webViewRef = wv
                     }
                 },
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
             )
         }
     }
@@ -278,10 +266,7 @@ fun PatternScreen(
 // ── Formatting toolbar ────────────────────────────────────────────────────────
 
 @Composable
-private fun PatternFormatToolbar(
-    enabled: Boolean,
-    onCommand: (String) -> Unit,
-) {
+private fun PatternFormatToolbar(enabled: Boolean, onCommand: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -291,77 +276,37 @@ private fun PatternFormatToolbar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        IconButton(
-            onClick = { onCommand("execCmd('bold')") },
-            enabled = enabled,
-            modifier = Modifier.size(40.dp),
-        ) {
+        IconButton(onClick = { onCommand("execCmd('bold')") }, enabled = enabled, modifier = Modifier.size(40.dp)) {
             Icon(Icons.Default.FormatBold, contentDescription = "Bold")
         }
-        IconButton(
-            onClick = { onCommand("execCmd('underline')") },
-            enabled = enabled,
-            modifier = Modifier.size(40.dp),
-        ) {
+        IconButton(onClick = { onCommand("execCmd('underline')") }, enabled = enabled, modifier = Modifier.size(40.dp)) {
             Icon(Icons.Default.FormatUnderlined, contentDescription = "Underline")
         }
-        IconButton(
-            onClick = { onCommand("execCmd('insertUnorderedList')") },
-            enabled = enabled,
-            modifier = Modifier.size(40.dp),
-        ) {
+        IconButton(onClick = { onCommand("execCmd('insertUnorderedList')") }, enabled = enabled, modifier = Modifier.size(40.dp)) {
             Icon(Icons.Default.FormatListBulleted, contentDescription = "Bullet list")
         }
-        IconButton(
-            onClick = { onCommand("execCmd('insertOrderedList')") },
-            enabled = enabled,
-            modifier = Modifier.size(40.dp),
-        ) {
+        IconButton(onClick = { onCommand("execCmd('insertOrderedList')") }, enabled = enabled, modifier = Modifier.size(40.dp)) {
             Icon(Icons.Default.FormatListNumbered, contentDescription = "Numbered list")
         }
-
-        Box(
-            modifier = Modifier
-                .width(1.dp)
-                .height(24.dp)
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)),
-        )
-
-        FontSizeButton("A", 11.sp, "Small text", enabled) { onCommand("execCmd('fontSize','2')") }
-        FontSizeButton("A", 15.sp, "Normal text", enabled) { onCommand("execCmd('fontSize','3')") }
-        FontSizeButton("A", 19.sp, "Large text", enabled) { onCommand("execCmd('fontSize','5')") }
-        FontSizeButton("A", 23.sp, "Extra-large text", enabled) { onCommand("execCmd('fontSize','7')") }
-
-        Box(
-            modifier = Modifier
-                .width(1.dp)
-                .height(24.dp)
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)),
-        )
-
+        Box(modifier = Modifier.width(1.dp).height(24.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)))
+        FontSizeButton("A", 11.sp, enabled) { onCommand("execCmd('fontSize','2')") }
+        FontSizeButton("A", 15.sp, enabled) { onCommand("execCmd('fontSize','3')") }
+        FontSizeButton("A", 19.sp, enabled) { onCommand("execCmd('fontSize','5')") }
+        FontSizeButton("A", 23.sp, enabled) { onCommand("execCmd('fontSize','7')") }
+        Box(modifier = Modifier.width(1.dp).height(24.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)))
         for ((composeColor, hexColor) in HIGHLIGHT_COLORS) {
             Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
+                modifier = Modifier.size(28.dp).clip(CircleShape)
                     .background(composeColor)
                     .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape)
-                    .clickable(enabled = enabled) {
-                        onCommand("execCmd('hiliteColor','$hexColor')")
-                    },
+                    .clickable(enabled = enabled) { onCommand("execCmd('hiliteColor','$hexColor')") },
             )
         }
-
-        // Remove highlight
         Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(CircleShape)
+            modifier = Modifier.size(28.dp).clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape)
-                .clickable(enabled = enabled) {
-                    onCommand("execCmd('hiliteColor','inherit')")
-                },
+                .clickable(enabled = enabled) { onCommand("execCmd('hiliteColor','inherit')") },
             contentAlignment = Alignment.Center,
         ) {
             Text("✕", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
@@ -370,35 +315,21 @@ private fun PatternFormatToolbar(
 }
 
 @Composable
-private fun FontSizeButton(
-    label: String,
-    textSize: androidx.compose.ui.unit.TextUnit,
-    contentDesc: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
+private fun FontSizeButton(label: String, textSize: androidx.compose.ui.unit.TextUnit, enabled: Boolean, onClick: () -> Unit) {
     Box(
-        modifier = Modifier
-            .size(32.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .clickable(enabled = enabled, onClick = onClick),
+        modifier = Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)).clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            label,
-            fontSize = textSize,
-            fontWeight = FontWeight.Bold,
-            color = if (enabled)
-                MaterialTheme.colorScheme.onSurface
-            else
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            label, fontSize = textSize, fontWeight = FontWeight.Bold,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
         )
     }
 }
 
 // ── JS ↔ Kotlin bridge ────────────────────────────────────────────────────────
 
-private class EditorBridge {
+private class EditorBridge(private val context: Context) {
     var onContent: ((String) -> Unit)? = null
 
     @JavascriptInterface
@@ -406,5 +337,17 @@ private class EditorBridge {
         val callback = onContent ?: return
         onContent = null
         Handler(Looper.getMainLooper()).post { callback(html) }
+    }
+
+    @JavascriptInterface
+    fun openUrl(url: String) {
+        Handler(Looper.getMainLooper()).post {
+            runCatching {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            }
+        }
     }
 }
