@@ -24,7 +24,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,11 +45,7 @@ import com.shadaeiou.stitchcounter.ui.pdf.copyPdfToInternal
 import com.shadaeiou.stitchcounter.ui.toolbar.BottomToolbar
 import com.shadaeiou.stitchcounter.viewmodel.CounterViewModel
 import com.shadaeiou.stitchcounter.viewmodel.Tool
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 private const val DIVIDER_HEIGHT_DP = 14
 private const val MIN_PANE_FRACTION = 0.15f
@@ -150,11 +145,6 @@ fun MainScreen(
                                 resetWithUndo()
                             },
                             onDismiss = { historyVisible = false },
-                        )
-                        EasternTimeClock(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(top = 8.dp, end = 12.dp),
                         )
                     }
                     if (showPdf) {
@@ -265,27 +255,6 @@ fun MainScreen(
                 vm.setKnitPattern(it)
                 patternEditorVisible = false
             },
-        )
-    }
-}
-
-@Composable
-private fun EasternTimeClock(modifier: Modifier = Modifier) {
-    val zone = remember { ZoneId.of("America/New_York") }
-    val formatter = remember { DateTimeFormatter.ofPattern("h:mm a") }
-    var timeText by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) {
-        while (true) {
-            timeText = formatter.format(LocalTime.now(zone)) + " ET"
-            delay(30_000L)
-        }
-    }
-    if (timeText.isNotEmpty()) {
-        androidx.compose.material3.Text(
-            text = timeText,
-            style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.55f),
-            modifier = modifier,
         )
     }
 }
