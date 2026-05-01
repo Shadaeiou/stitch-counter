@@ -14,8 +14,22 @@ Durable instructions for Claude Code sessions in this repo.
   stop-hooks don't complain — but `main` is the canonical target.
 - `versionCode` = `git rev-list --count HEAD`, `versionName` = `"0.1.${gitCount}"`.
   Each commit on `main` is therefore a new release. Keep commits self-contained.
-- Never `--force` push, never rewrite published commits, never bypass hooks
-  (`--no-verify`).
+- **Multiple Claude Code sessions push to this repo concurrently.** Expect
+  `main` to advance under your feet between when you start work and when
+  you push. Workflow:
+  1. Before pushing, run `git fetch origin main`.
+  2. If `origin/main` is ahead, rebase your local commits onto it
+     (`git rebase origin/main`). Do NOT merge — keep history linear.
+  3. After rebasing, recompute the changelog `versionCode` to match the
+     new tip + 1 (since `git rev-list --count HEAD` includes the upstream
+     commits you just incorporated).
+  4. If upstream commits added user-visible changes without a changelog
+     entry, back-fill those entries before you push so the in-app
+     "What's new" stays correct.
+  5. Push to `main` normally; if it still rejects, fetch + rebase again.
+- Never `--force` push to `main`, never rewrite published commits on
+  `main`, never bypass hooks (`--no-verify`). Force-push to your local
+  feature/tracking branch is fine if needed after rebasing.
 
 ## Persistent storage — DO NOT CORRUPT
 

@@ -13,6 +13,13 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 24,
+        versionName = "0.1.24",
+        notes = listOf(
+            "Internal: documented the concurrent-session push workflow in CLAUDE.md (fetch + rebase before pushing to main, never force-push, back-fill changelog entries for upstream commits). No user-facing behavior change.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 23,
         versionName = "0.1.23",
         notes = listOf(
