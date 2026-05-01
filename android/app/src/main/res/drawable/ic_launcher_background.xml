@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <solid android:color="#0F172A" />
-</shape>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Pastel horizontal stripes — each ~15.4dp, 7 rows -->
+    <path android:fillColor="#FFB3C6" android:pathData="M0,0 H108 V15.5 H0Z"/>
+    <path android:fillColor="#FFC8DD" android:pathData="M0,15.5 H108 V31 H0Z"/>
+    <path android:fillColor="#D4B8E0" android:pathData="M0,31 H108 V46.5 H0Z"/>
+    <path android:fillColor="#BDE0FE" android:pathData="M0,46.5 H108 V62 H0Z"/>
+    <path android:fillColor="#B5EAD7" android:pathData="M0,62 H108 V77.5 H0Z"/>
+    <path android:fillColor="#FDFFB6" android:pathData="M0,77.5 H108 V93 H0Z"/>
+    <path android:fillColor="#FFD6A5" android:pathData="M0,93 H108 V108 H0Z"/>
+</vector>

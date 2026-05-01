@@ -4,12 +4,104 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!--
+        Stockinette stitch: rows of interlocking V shapes (knit face).
+        Odd rows: V centres at x=24,36,48,60,72,84  (width=12, height=10)
+        Even rows: offset by 6 — centres at x=18,30,42,54,66,78,90
+        Six rows total covering the full icon canvas.
+    -->
+    <!-- Row 1  y-top=14  y-bottom=24  centres: 24,36,48,60,72,84 -->
     <path
-        android:fillColor="#22C55E"
-        android:pathData="M54,30 m-18,0 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0 z" />
-    <path
-        android:strokeColor="#22C55E"
-        android:strokeWidth="6"
+        android:fillColor="#00000000"
+        android:strokeColor="#55000000"
+        android:strokeWidth="2.4"
         android:strokeLineCap="round"
-        android:pathData="M30,72 L78,72 M36,82 L72,82" />
+        android:strokeLineJoin="round"
+        android:pathData="M18,14 L24,24 L30,14
+                          M30,14 L36,24 L42,14
+                          M42,14 L48,24 L54,14
+                          M54,14 L60,24 L66,14
+                          M66,14 L72,24 L78,14
+                          M78,14 L84,24 L90,14"/>
+    <!-- Row 2  y-top=26  y-bottom=36  offset centres: 18,30,42,54,66,78,90 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#55000000"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,26 L18,36 L24,26
+                          M24,26 L30,36 L36,26
+                          M36,26 L42,36 L48,26
+                          M48,26 L54,36 L60,26
+                          M60,26 L66,36 L72,26
+                          M72,26 L78,36 L84,26
+                          M84,26 L90,36 L96,26"/>
+    <!-- Row 3  y-top=38  y-bottom=48  centres: 24,36,48,60,72,84 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#55000000"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M18,38 L24,48 L30,38
+                          M30,38 L36,48 L42,38
+                          M42,38 L48,48 L54,38
+                          M54,38 L60,48 L66,38
+                          M66,38 L72,48 L78,38
+                          M78,38 L84,48 L90,38"/>
+    <!-- Row 4  y-top=50  y-bottom=60  offset centres: 18,30,42,54,66,78,90 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#55000000"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,50 L18,60 L24,50
+                          M24,50 L30,60 L36,50
+                          M36,50 L42,60 L48,50
+                          M48,50 L54,60 L60,50
+                          M60,50 L66,60 L72,50
+                          M72,50 L78,60 L84,50
+                          M84,50 L90,60 L96,50"/>
+    <!-- Row 5  y-top=62  y-bottom=72  centres: 24,36,48,60,72,84 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#55000000"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M18,62 L24,72 L30,62
+                          M30,62 L36,72 L42,62
+                          M42,62 L48,72 L54,62
+                          M54,62 L60,72 L66,62
+                          M66,62 L72,72 L78,62
+                          M78,62 L84,72 L90,62"/>
+    <!-- Row 6  y-top=74  y-bottom=84  offset centres: 18,30,42,54,66,78,90 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#55000000"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,74 L18,84 L24,74
+                          M24,74 L30,84 L36,74
+                          M36,74 L42,84 L48,74
+                          M48,74 L54,84 L60,74
+                          M60,74 L66,84 L72,74
+                          M72,74 L78,84 L84,74
+                          M84,74 L90,84 L96,74"/>
+    <!-- Row 7  y-top=86  y-bottom=96  centres: 24,36,48,60,72,84 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#55000000"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M18,86 L24,96 L30,86
+                          M30,86 L36,96 L42,86
+                          M42,86 L48,96 L54,86
+                          M54,86 L60,96 L66,86
+                          M66,86 L72,96 L78,86
+                          M78,86 L84,96 L90,86"/>
 </vector>

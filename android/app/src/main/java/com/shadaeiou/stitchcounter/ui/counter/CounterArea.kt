@@ -122,7 +122,7 @@ fun CounterArea(
     val moveCancelPx = with(density) { MOVE_CANCEL_DP.dp.toPx() }
     val pullTriggerPx = with(density) { PULL_TRIGGER_DP.dp.toPx() }
     val backgroundColor = Color(backgroundArgb.toInt())
-    val patternLetter = stitchLetterFor(count, knitPattern)
+    val patternIndicator = stitchIndicatorFor(count, knitPattern)
 
     Box(
         modifier = modifier
@@ -248,13 +248,23 @@ fun CounterArea(
                         )
                     }
                 }
-                if (patternLetter != null) {
+                if (patternIndicator != null) {
+                    val indicatorColor = when {
+                        patternIndicator.startsWith('K', ignoreCase = true) -> Color(0xFF4ADE80)
+                        patternIndicator.startsWith('P', ignoreCase = true) -> Color(0xFFF87171)
+                        else -> Color(0xFF93C5FD)
+                    }
+                    val indicatorStyle = when {
+                        patternIndicator.length <= 3 -> MaterialTheme.typography.displayMedium
+                        patternIndicator.length <= 8 -> MaterialTheme.typography.headlineMedium
+                        else -> MaterialTheme.typography.titleLarge
+                    }
                     Text(
-                        text = patternLetter.toString(),
-                        style = MaterialTheme.typography.displayMedium,
-                        color = if (patternLetter == 'K') Color(0xFF4ADE80) else Color(0xFFF87171),
+                        text = patternIndicator.take(20),
+                        style = indicatorStyle,
+                        color = indicatorColor,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 24.dp),
+                        modifier = Modifier.padding(start = 16.dp),
                     )
                 }
             }
@@ -358,9 +368,20 @@ private fun capForMain(text: String, maxChars: Int): String {
     return text.take(maxChars - 1).trimEnd() + "…"
 }
 
-private fun stitchLetterFor(count: Int, pattern: String): Char? {
+private const val STEP_SEP = "|||"
+
+private fun stitchIndicatorFor(count: Int, pattern: String): String? {
+    if (pattern.isBlank()) return null
+    val safeCount = if (count < 0) 0 else count
+    if (pattern.contains(STEP_SEP)) {
+        val parts = pattern.split(STEP_SEP)
+        val steps = parts.take(4).filter { it.isNotBlank() }
+        if (steps.isEmpty()) return null
+        val every = parts.getOrNull(4)?.toIntOrNull()?.coerceIn(1, 999) ?: 1
+        return steps[(safeCount / every) % steps.size]
+    }
+    // Legacy K/P single-character format
     val cleaned = pattern.filter { it == 'K' || it == 'P' }
     if (cleaned.isEmpty()) return null
-    val safeCount = if (count < 0) 0 else count
-    return cleaned[safeCount % cleaned.length]
+    return cleaned[safeCount % cleaned.length].toString()
 }

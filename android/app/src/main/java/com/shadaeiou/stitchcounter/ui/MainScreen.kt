@@ -8,12 +8,16 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
@@ -285,35 +289,81 @@ private fun PaneDivider(
     }
 }
 
+private const val STEP_SEP = "|||"
+
+private fun decodeKnitPattern(raw: String): Pair<List<String>, Int> {
+    if (raw.contains(STEP_SEP)) {
+        val parts = raw.split(STEP_SEP)
+        val steps = parts.take(4).toMutableList()
+        while (steps.size < 4) steps.add("")
+        val every = parts.getOrNull(4)?.toIntOrNull()?.coerceIn(1, 999) ?: 1
+        return Pair(steps, every)
+    }
+    // Legacy K/P format: put the whole string in step 1
+    return Pair(listOf(raw, "", "", ""), 1)
+}
+
+fun encodeKnitPattern(steps: List<String>, every: Int): String =
+    steps.take(4).joinToString(STEP_SEP) + STEP_SEP + every.coerceIn(1, 999)
+
 @Composable
 private fun KnitPatternEditor(
     initial: String,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {
-    var draft by remember { mutableStateOf(initial) }
+    val (initSteps, initEvery) = remember(initial) { decodeKnitPattern(initial) }
+    val steps = remember { mutableStateListOf(*initSteps.toTypedArray()) }
+    var every by remember { mutableStateOf(initEvery.toString()) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Knit pattern") },
         text = {
             Column {
                 Text(
-                    "Type a sequence of K (knit) and P (purl). It repeats. Each character is one row. Leave empty to hide the indicator.",
+                    "Each step is a row label or instruction (e.g. K20, P5, Row 1). Steps cycle in order. Leave unused steps empty.",
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = draft,
-                    onValueChange = { input ->
-                        draft = input.uppercase().filter { it == 'K' || it == 'P' }
-                    },
-                    placeholder = { Text("e.g. KKP") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
+                steps.forEachIndexed { i, value ->
+                    OutlinedTextField(
+                        value = value,
+                        onValueChange = { steps[i] = it },
+                        label = { Text("Step ${i + 1}") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                    if (i < steps.lastIndex) Spacer(Modifier.height(6.dp))
+                }
+                Spacer(Modifier.height(14.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Advance after",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedTextField(
+                        value = every,
+                        onValueChange = { every = it.filter(Char::isDigit).take(3).trimStart('0').ifEmpty { "1" } },
+                        modifier = Modifier.width(72.dp),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "count(s)",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    )
+                }
             }
         },
-        confirmButton = { Button(onClick = { onSave(draft) }) { Text("Save") } },
+        confirmButton = {
+            Button(onClick = {
+                val everyInt = every.toIntOrNull()?.coerceIn(1, 999) ?: 1
+                onSave(encodeKnitPattern(steps.toList(), everyInt))
+            }) { Text("Save") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }

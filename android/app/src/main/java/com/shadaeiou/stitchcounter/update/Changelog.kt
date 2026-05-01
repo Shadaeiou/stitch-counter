@@ -13,6 +13,14 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 28,
+        versionName = "0.1.28",
+        notes = listOf(
+            "Knit pattern now supports 4 custom steps — type any label (e.g. K20, P5, Row 1) and set how many counts to spend on each step before advancing.",
+            "New pastel striped app icon styled after the stockinette stitch.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 27,
         versionName = "0.1.27",
         notes = listOf(
@@ -30,8 +38,8 @@ val Changelog: List<ChangelogEntry> = listOf(
         versionCode = 25,
         versionName = "0.1.25",
         notes = listOf(
-            "Pattern import now shows photo thumbnails inline.",
-            "Counter screen briefly displayed an Eastern time clock (removed in build 26).",
+            "Pattern import now shows inline photo thumbnails from the source page — tap any image to open it in the browser.",
+            "Blog comment sections are stripped from imported patterns.",
         ),
     ),
     ChangelogEntry(
