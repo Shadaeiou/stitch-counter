@@ -13,6 +13,37 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 23,
+        versionName = "0.1.23",
+        notes = listOf(
+            "Internal: added a CLAUDE.md at the repo root capturing the working agreements (push to main, never corrupt persisted notes / counts / annotations, keep the changelog up to date, etc.). No user-facing behavior change.",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 22,
+        versionName = "0.1.22",
+        notes = listOf(
+            "Imported patterns: Save action moved to a floating action button.",
+            "Imported patterns: comment / blog sections are stripped before display.",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 21,
+        versionName = "0.1.21",
+        notes = listOf(
+            "Internal merge commit (no user-facing changes).",
+        ),
+    ),
+    ChangelogEntry(
+        versionCode = 20,
+        versionName = "0.1.20",
+        notes = listOf(
+            "New Pattern screen: import a knitting pattern by URL and view it inside the app.",
+            "Pinch-to-zoom now works on the PDF even while a pen / eraser tool is selected.",
+            "Eraser icon updated to a custom drawable.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 19,
         versionName = "0.1.19",
         notes = listOf(
