@@ -30,13 +30,17 @@ import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.FormatUnderlined
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,7 +74,7 @@ private val HIGHLIGHT_COLORS = listOf(
     Color(0xFFADD8E6) to "#ADD8E6",   // light blue
 )
 
-// HTML shell loaded into the WebView.  JavaScript helpers are kept minimal.
+// HTML shell loaded into the WebView.
 private val EDITOR_HTML = """
 <!DOCTYPE html>
 <html>
@@ -119,6 +123,7 @@ function execCmd(cmd, val) {
 </html>
 """.trimIndent()
 
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun PatternScreen(
@@ -132,11 +137,9 @@ fun PatternScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Hold a reference to the live WebView so Compose code can call JS methods.
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var webViewReady by remember { mutableStateOf(false) }
 
-    // Bridge for the Save flow: JS calls Android.receiveContent(html).
     val bridge = remember { EditorBridge() }
 
     // Inject saved pattern once the WebView has finished loading.
@@ -172,106 +175,103 @@ fun PatternScreen(
             scope.launch { vm.setPatternHtml(html) }
             onBack()
         }
-        // Ask JavaScript to pass the editor innerHTML back via the bridge.
         webViewRef?.evaluateJavascript(
             "Android.receiveContent(document.getElementById('editor').innerHTML)",
             null,
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-    ) {
-        // ── Top bar ──────────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-            Text(
-                "Pattern",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f),
-            )
-            Button(
-                onClick = { saveContent() },
-                enabled = webViewReady,
-            ) { Text("Save") }
-        }
-
-        // ── URL import row ───────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedTextField(
-                value = urlInput,
-                onValueChange = { urlInput = it },
-                placeholder = { Text("Paste URL to import pattern…") },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-            )
-            Button(
-                onClick = { fetchUrl() },
-                enabled = !isLoading && urlInput.isNotBlank(),
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                } else {
-                    Text("Fetch")
-                }
-            }
-        }
-
-        if (errorMessage != null) {
-            Text(
-                text = errorMessage!!,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp),
-            )
-            Spacer(Modifier.height(4.dp))
-        }
-
-        // ── Formatting toolbar ───────────────────────────────────────────────
-        PatternFormatToolbar(
-            enabled = webViewReady,
-            onCommand = { js -> webViewRef?.evaluateJavascript(js, null) },
-        )
-
-        // ── WebView editor ───────────────────────────────────────────────────
-        AndroidView(
-            factory = { ctx ->
-                WebView(ctx).also { wv ->
-                    wv.settings.javaScriptEnabled = true
-                    wv.settings.domStorageEnabled = true
-                    wv.addJavascriptInterface(bridge, "Android")
-                    wv.webViewClient = object : WebViewClient() {
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            webViewReady = true
-                        }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Pattern") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                    wv.loadDataWithBaseURL(null, EDITOR_HTML, "text/html", "UTF-8", null)
-                    webViewRef = wv
-                }
-            },
+                },
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { if (webViewReady) saveContent() },
+                icon = { Icon(Icons.Default.Save, contentDescription = null) },
+                text = { Text("Save") },
+            )
+        },
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-        )
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            // ── URL import row ───────────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = urlInput,
+                    onValueChange = { urlInput = it },
+                    placeholder = { Text("Paste URL to import pattern…") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                )
+                IconButton(
+                    onClick = { fetchUrl() },
+                    enabled = !isLoading && urlInput.isNotBlank(),
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text("Go", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
+
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp),
+                )
+                Spacer(Modifier.height(4.dp))
+            }
+
+            // ── Formatting toolbar ───────────────────────────────────────────
+            PatternFormatToolbar(
+                enabled = webViewReady,
+                onCommand = { js -> webViewRef?.evaluateJavascript(js, null) },
+            )
+
+            // ── WebView editor ───────────────────────────────────────────────
+            AndroidView(
+                factory = { ctx ->
+                    WebView(ctx).also { wv ->
+                        wv.settings.javaScriptEnabled = true
+                        wv.settings.domStorageEnabled = true
+                        wv.addJavascriptInterface(bridge, "Android")
+                        wv.webViewClient = object : WebViewClient() {
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                webViewReady = true
+                            }
+                        }
+                        wv.loadDataWithBaseURL(null, EDITOR_HTML, "text/html", "UTF-8", null)
+                        webViewRef = wv
+                    }
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            )
+        }
     }
 }
 
@@ -291,7 +291,6 @@ private fun PatternFormatToolbar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        // Bold
         IconButton(
             onClick = { onCommand("execCmd('bold')") },
             enabled = enabled,
@@ -299,7 +298,6 @@ private fun PatternFormatToolbar(
         ) {
             Icon(Icons.Default.FormatBold, contentDescription = "Bold")
         }
-        // Underline
         IconButton(
             onClick = { onCommand("execCmd('underline')") },
             enabled = enabled,
@@ -307,7 +305,6 @@ private fun PatternFormatToolbar(
         ) {
             Icon(Icons.Default.FormatUnderlined, contentDescription = "Underline")
         }
-        // Bullet list
         IconButton(
             onClick = { onCommand("execCmd('insertUnorderedList')") },
             enabled = enabled,
@@ -315,7 +312,6 @@ private fun PatternFormatToolbar(
         ) {
             Icon(Icons.Default.FormatListBulleted, contentDescription = "Bullet list")
         }
-        // Numbered list
         IconButton(
             onClick = { onCommand("execCmd('insertOrderedList')") },
             enabled = enabled,
@@ -324,7 +320,6 @@ private fun PatternFormatToolbar(
             Icon(Icons.Default.FormatListNumbered, contentDescription = "Numbered list")
         }
 
-        // Divider
         Box(
             modifier = Modifier
                 .width(1.dp)
@@ -332,21 +327,11 @@ private fun PatternFormatToolbar(
                 .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)),
         )
 
-        // Font size buttons — "A" in escalating sizes
-        FontSizeButton("A", 11.sp, "Small text", enabled) {
-            onCommand("execCmd('fontSize','2')")
-        }
-        FontSizeButton("A", 15.sp, "Normal text", enabled) {
-            onCommand("execCmd('fontSize','3')")
-        }
-        FontSizeButton("A", 19.sp, "Large text", enabled) {
-            onCommand("execCmd('fontSize','5')")
-        }
-        FontSizeButton("A", 23.sp, "Extra-large text", enabled) {
-            onCommand("execCmd('fontSize','7')")
-        }
+        FontSizeButton("A", 11.sp, "Small text", enabled) { onCommand("execCmd('fontSize','2')") }
+        FontSizeButton("A", 15.sp, "Normal text", enabled) { onCommand("execCmd('fontSize','3')") }
+        FontSizeButton("A", 19.sp, "Large text", enabled) { onCommand("execCmd('fontSize','5')") }
+        FontSizeButton("A", 23.sp, "Extra-large text", enabled) { onCommand("execCmd('fontSize','7')") }
 
-        // Divider
         Box(
             modifier = Modifier
                 .width(1.dp)
@@ -354,7 +339,6 @@ private fun PatternFormatToolbar(
                 .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)),
         )
 
-        // Highlight colour swatches
         for ((composeColor, hexColor) in HIGHLIGHT_COLORS) {
             Box(
                 modifier = Modifier
@@ -380,11 +364,7 @@ private fun PatternFormatToolbar(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                "✕",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            Text("✕", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -419,7 +399,6 @@ private fun FontSizeButton(
 // ── JS ↔ Kotlin bridge ────────────────────────────────────────────────────────
 
 private class EditorBridge {
-    // Set before calling webView.evaluateJavascript to receive the content.
     var onContent: ((String) -> Unit)? = null
 
     @JavascriptInterface

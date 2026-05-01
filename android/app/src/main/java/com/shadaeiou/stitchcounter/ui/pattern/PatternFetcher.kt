@@ -33,10 +33,73 @@ object PatternFetcher {
             if (contentType.contains("application/pdf") || body.startsWith("%PDF")) {
                 throw Exception("PDF files are not supported here. Use 'Upload PDF' to view PDFs with annotations.")
             }
-            val plainText = extractTextFromHtml(body)
-            findPatternStart(plainText)
+            val cleaned = removeCommentSections(body)
+            val plainText = extractTextFromHtml(cleaned)
+            val withoutTrailingComments = trimTextComments(plainText)
+            findPatternStart(withoutTrailingComments)
         }
     }
+
+    // ── HTML-level comment removal ────────────────────────────────────────────
+    // Finds the first HTML element whose id or class strongly indicates a
+    // comment section and discards everything from that point onward.
+
+    private val COMMENT_SECTION_PATTERNS = listOf(
+        // id-based (most reliable)
+        Regex("""<(?:div|section|aside|article|ol|ul)[^>]+\bid\s*=\s*["'][^"']*\bcomments?\b[^"']*["']""",
+            RegexOption.IGNORE_CASE),
+        Regex("""<(?:div|section)[^>]+\bid\s*=\s*["']respond["']""",
+            RegexOption.IGNORE_CASE),
+        Regex("""<(?:div|section)[^>]+\bid\s*=\s*["']discussion["']""",
+            RegexOption.IGNORE_CASE),
+        // class-based
+        Regex("""<(?:div|section|aside|ol|ul)[^>]+\bclass\s*=\s*["'][^"']*\bcomments?(?:-section|-area|-list|-block|-wrap(?:per)?)?\b[^"']*["']""",
+            RegexOption.IGNORE_CASE),
+        Regex("""<(?:div|section)[^>]+\bclass\s*=\s*["'][^"']*\bdiscussion\b[^"']*["']""",
+            RegexOption.IGNORE_CASE),
+        Regex("""<(?:div|section)[^>]+\bclass\s*=\s*["'][^"']*\bcomment-respond\b[^"']*["']""",
+            RegexOption.IGNORE_CASE),
+        // Disqus embed
+        Regex("""<div[^>]+\bid\s*=\s*["']disqus_thread["']""",
+            RegexOption.IGNORE_CASE),
+    )
+
+    private fun removeCommentSections(html: String): String {
+        var earliest = Int.MAX_VALUE
+        for (pattern in COMMENT_SECTION_PATTERNS) {
+            val idx = pattern.find(html)?.range?.first ?: continue
+            if (idx < earliest) earliest = idx
+        }
+        return if (earliest < html.length) html.substring(0, earliest) else html
+    }
+
+    // ── Plain-text-level comment trimming ────────────────────────────────────
+    // Fallback: after tag-stripping, look for text phrases that mark the start
+    // of the reader-comment section and drop everything after them.
+
+    private val TEXT_COMMENT_MARKERS = listOf(
+        Regex("""(?im)^[ \t]*Leave (a )?[Rr]eply\b"""),
+        Regex("""(?im)^[ \t]*Leave (a )?[Cc]omment\b"""),
+        Regex("""(?im)^[ \t]*Post (a )?[Cc]omment\b"""),
+        Regex("""(?im)^[ \t]*Add (a )?[Cc]omment\b"""),
+        Regex("""(?im)^[ \t]*\d+\s+[Cc]omments?\s*$"""),
+        Regex("""(?im)^[ \t]*[Cc]omments?\s*\(\d+\)\s*$"""),
+        Regex("""(?im)^[ \t]*Join the [Cc]onversation\b"""),
+        Regex("""(?im)^[ \t]*\d+\s+[Rr]espond(?:s|ed)?\b"""),
+        Regex("""(?im)^[ \t]*Reader [Cc]omments?\b"""),
+        Regex("""(?im)^[ \t]*Share your thoughts?\b"""),
+    )
+
+    private fun trimTextComments(text: String): String {
+        var earliest = Int.MAX_VALUE
+        for (pattern in TEXT_COMMENT_MARKERS) {
+            val idx = pattern.find(text)?.range?.first ?: continue
+            if (idx < earliest) earliest = idx
+        }
+        return if (earliest < text.length) text.substring(0, earliest).trim() else text
+    }
+
+    // ── HTML → plain text ─────────────────────────────────────────────────────
 
     private fun extractTextFromHtml(html: String): String {
         var text = html
@@ -75,21 +138,19 @@ object PatternFetcher {
         return text.trim()
     }
 
-    // Heuristic: find where the knitting / crochet pattern actually starts and
-    // trim any blog intro / copyright preamble that comes before it.
+    // ── Pattern-start heuristic ───────────────────────────────────────────────
+    // Trim any blog intro / copyright preamble that comes before the actual
+    // knit / crochet instructions.
+
     private fun findPatternStart(text: String): String {
         val markers = listOf(
-            // Materials/supplies header — reliably marks the start of a pattern
             Regex("(?im)^[ \t]*(?:materials?|supplies?|what you'?ll? need)[ \t]*:"),
             Regex("(?im)^[ \t]*(?:yarn|hook|needle|gauge|abbreviations?|notes?)[ \t]*:"),
-            // Cast-on or foundation chain
             Regex("(?im)^[ \t]*(?:cast[ \t]+on|co)[ \t]+\\d+"),
             Regex("(?im)^[ \t]*(?:ch|chain)[ \t]+\\d+"),
-            // First row / round
             Regex("(?im)^[ \t]*row[ \t]+1\\b"),
             Regex("(?im)^[ \t]*r(?:oun)?d\\.?[ \t]*1\\b"),
             Regex("(?im)^[ \t]*rnd\\.?[ \t]*1\\b"),
-            // Common stitch abbreviations that indicate pattern body
             Regex("(?i)\\bk2tog\\b"),
             Regex("(?i)\\bssk\\b"),
             Regex("(?i)\\bsc[ \t]+\\d+\\b"),
@@ -102,13 +163,12 @@ object PatternFetcher {
             if (match.range.first < earliest) earliest = match.range.first
         }
         if (earliest == Int.MAX_VALUE) return text
-        // Start from the beginning of whichever line contains the marker
         val lineStart = text.lastIndexOf('\n', earliest - 1).let { if (it < 0) 0 else it + 1 }
         return text.substring(lineStart).trim()
     }
 }
 
-// Convert plain text to simple HTML for the editor (preserves paragraphs)
+// Convert plain text to simple HTML paragraphs for the editor.
 fun plainTextToHtml(text: String): String {
     val escaped = text
         .replace("&", "&amp;")
