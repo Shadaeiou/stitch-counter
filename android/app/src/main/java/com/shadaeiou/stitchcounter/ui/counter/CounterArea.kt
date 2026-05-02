@@ -63,7 +63,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-private const val TAP_DEBOUNCE_MS = 250L
+private const val TAP_DEBOUNCE_MS = 80L
 private const val LONG_PRESS_MS = 400L
 private const val HINT_DELAY_MS = 200L
 private const val MOVE_CANCEL_DP = 10
