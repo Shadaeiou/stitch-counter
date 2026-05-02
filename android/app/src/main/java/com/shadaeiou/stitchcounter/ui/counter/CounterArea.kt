@@ -69,7 +69,6 @@ private const val HINT_DELAY_MS = 200L
 private const val MOVE_CANCEL_DP = 10
 private const val PULL_TRIGGER_DP = 60
 private const val FLASH_MS = 600
-private const val PINNED_NOTE_MAX_CHARS = 80
 
 @Composable
 fun CounterArea(
@@ -281,9 +280,8 @@ fun CounterArea(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 pinnedNotes.take(3).forEach { note ->
-                    val capped = capForMain(note.text, PINNED_NOTE_MAX_CHARS)
                     AutoSizeNoteText(
-                        text = capped,
+                        text = note.text,
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.Black.copy(alpha = 0.45f))
@@ -341,7 +339,7 @@ private fun AutoSizeNoteText(
     text: String,
     modifier: Modifier = Modifier,
     maxFontSize: TextUnit = 28.sp,
-    minFontSize: TextUnit = 12.sp,
+    minFontSize: TextUnit = 8.sp,
 ) {
     var fontSize by remember(text) { mutableStateOf(maxFontSize) }
     Text(
@@ -350,7 +348,7 @@ private fun AutoSizeNoteText(
         color = Color.White,
         fontSize = fontSize,
         textAlign = TextAlign.Center,
-        maxLines = 2,
+        maxLines = 4,
         softWrap = true,
         onTextLayout = { result ->
             if ((result.didOverflowWidth || result.didOverflowHeight) &&
@@ -361,11 +359,6 @@ private fun AutoSizeNoteText(
             }
         },
     )
-}
-
-private fun capForMain(text: String, maxChars: Int): String {
-    if (text.length <= maxChars) return text
-    return text.take(maxChars - 1).trimEnd() + "…"
 }
 
 private const val STEP_SEP = "|||"
