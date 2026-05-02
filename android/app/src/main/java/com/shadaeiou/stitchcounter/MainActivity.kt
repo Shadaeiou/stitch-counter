@@ -97,6 +97,7 @@ private fun AppRoot(activityVm: CounterViewModel) {
     val counterBg by prefs.counterBackgroundFlow.collectAsState(
         initial = com.shadaeiou.stitchcounter.data.prefs.UserPrefs.DEFAULT_COUNTER_BG
     )
+    val counterView by prefs.counterViewFlow.collectAsState(initial = 0)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var pending by remember { mutableStateOf<UpdateInfo?>(null) }
@@ -115,6 +116,8 @@ private fun AppRoot(activityVm: CounterViewModel) {
         Screen.Main -> MainScreen(
             vm = activityVm,
             counterBackgroundArgb = counterBg,
+            counterView = counterView,
+            onCounterViewChange = { v -> scope.launch { prefs.setCounterView(v) } },
             onOpenSettings = { screen = Screen.Settings },
             onOpenNotes = { screen = Screen.Notes },
             onOpenPattern = { screen = Screen.Pattern },

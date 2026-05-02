@@ -15,18 +15,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +63,8 @@ private const val MIN_PANE_FRACTION = 0.15f
 fun MainScreen(
     vm: CounterViewModel,
     counterBackgroundArgb: Long,
+    counterView: Int,
+    onCounterViewChange: (Int) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenNotes: () -> Unit,
     onOpenPattern: () -> Unit,
@@ -82,7 +89,7 @@ fun MainScreen(
     var pdfHidden by remember { mutableStateOf(false) }
     var confirmRemovePdf by remember { mutableStateOf(false) }
     var penPanelVisible by remember { mutableStateOf(false) }
-    var patternEditorVisible by remember { mutableStateOf(false) }
+    var counterSettingsVisible by remember { mutableStateOf(false) }
     // Pane split as a fraction of the splittable region (counter + pdf area).
     var counterFraction by remember { mutableStateOf(0.5f) }
 
@@ -132,12 +139,13 @@ fun MainScreen(
                             interactionsEnabled = tool == Tool.None,
                             backgroundArgb = counterBackgroundArgb,
                             knitPattern = knitPattern,
+                            counterView = counterView,
                             pinnedNotes = pinnedNotes,
                             onIncrement = vm::increment,
                             onDecrement = vm::decrement,
                             onPullDown = { historyVisible = true },
                             onReset = ::resetWithUndo,
-                            onEditPattern = { patternEditorVisible = true },
+                            onEditPattern = { counterSettingsVisible = true },
                             modifier = Modifier.fillMaxSize(),
                         )
                         HistoryOverlay(
@@ -251,13 +259,15 @@ fun MainScreen(
         )
     }
 
-    if (patternEditorVisible) {
-        KnitPatternEditor(
-            initial = knitPattern,
-            onDismiss = { patternEditorVisible = false },
-            onSave = {
-                vm.setKnitPattern(it)
-                patternEditorVisible = false
+    if (counterSettingsVisible) {
+        CounterSettingsDialog(
+            currentView = counterView,
+            currentPattern = knitPattern,
+            onDismiss = { counterSettingsVisible = false },
+            onSave = { view, pattern ->
+                onCounterViewChange(view)
+                vm.setKnitPattern(pattern)
+                counterSettingsVisible = false
             },
         )
     }
@@ -299,33 +309,66 @@ private fun decodeKnitPattern(raw: String): Pair<List<String>, Int> {
         val every = parts.getOrNull(4)?.toIntOrNull()?.coerceIn(1, 999) ?: 1
         return Pair(steps, every)
     }
-    // Legacy K/P format: put the whole string in step 1
     return Pair(listOf(raw, "", "", ""), 1)
 }
 
 fun encodeKnitPattern(steps: List<String>, every: Int): String =
     steps.take(4).joinToString(STEP_SEP) + STEP_SEP + every.coerceIn(1, 999)
 
+private val VIEW_LABELS = listOf(
+    "View 1 — single counter with row label",
+    "View 2 — rows completed + next row",
+)
+
 @Composable
-private fun KnitPatternEditor(
-    initial: String,
+private fun CounterSettingsDialog(
+    currentView: Int,
+    currentPattern: String,
     onDismiss: () -> Unit,
-    onSave: (String) -> Unit,
+    onSave: (view: Int, pattern: String) -> Unit,
 ) {
-    val (initSteps, initEvery) = remember(initial) { decodeKnitPattern(initial) }
+    val (initSteps, initEvery) = remember(currentPattern) { decodeKnitPattern(currentPattern) }
     val steps = remember { mutableStateListOf(*initSteps.toTypedArray()) }
     var every by remember { mutableStateOf(initEvery.toString()) }
+    var selectedView by remember { mutableStateOf(currentView) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Knit pattern") },
+        title = { Text("Counter settings") },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
-                    "Each step is a row label or instruction (e.g. K20, P5, Row 1). Steps cycle in order. Leave unused steps empty.",
+                    "View",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(4.dp))
+                VIEW_LABELS.forEachIndexed { i, label ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        RadioButton(
+                            selected = selectedView == i,
+                            onClick = { selectedView = i },
+                        )
+                        Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Knit pattern",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Each step is a row label (e.g. K20, P5, Row 1). Steps cycle in order. Leave unused steps empty.",
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
                 steps.forEachIndexed { i, value ->
                     OutlinedTextField(
                         value = value,
@@ -336,7 +379,7 @@ private fun KnitPatternEditor(
                     )
                     if (i < steps.lastIndex) Spacer(Modifier.height(6.dp))
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "Advance after",
@@ -361,7 +404,7 @@ private fun KnitPatternEditor(
         confirmButton = {
             Button(onClick = {
                 val everyInt = every.toIntOrNull()?.coerceIn(1, 999) ?: 1
-                onSave(encodeKnitPattern(steps.toList(), everyInt))
+                onSave(selectedView, encodeKnitPattern(steps.toList(), everyInt))
             }) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },

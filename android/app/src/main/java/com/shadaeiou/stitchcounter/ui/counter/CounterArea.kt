@@ -77,6 +77,7 @@ fun CounterArea(
     interactionsEnabled: Boolean,
     backgroundArgb: Long,
     knitPattern: String,
+    counterView: Int,
     pinnedNotes: List<NoteItem>,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
@@ -122,6 +123,7 @@ fun CounterArea(
     val pullTriggerPx = with(density) { PULL_TRIGGER_DP.dp.toPx() }
     val backgroundColor = Color(backgroundArgb.toInt())
     val patternIndicator = stitchIndicatorFor(count, knitPattern)
+    val nextRowIndicator = if (counterView == 1) stitchIndicatorFor(count + 1, knitPattern) else null
 
     Box(
         modifier = modifier
@@ -231,40 +233,117 @@ fun CounterArea(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = count.toString(),
-                        style = MaterialTheme.typography.displayLarge,
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                    )
-                    if (hintVisible) {
-                        Text(
-                            "−1",
-                            style = MaterialTheme.typography.displayLarge,
-                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
-                        )
+            when (counterView) {
+                1 -> {
+                    // View 2: rows completed (big, left) + next row (smaller, right)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(28.dp),
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = count.toString(),
+                                    style = MaterialTheme.typography.displayLarge,
+                                    color = Color.White,
+                                    textAlign = TextAlign.Center,
+                                )
+                                if (hintVisible) {
+                                    Text(
+                                        "−1",
+                                        style = MaterialTheme.typography.displayLarge,
+                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                                    )
+                                }
+                            }
+                            Text(
+                                "rows completed",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.6f),
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                Text(
+                                    text = (count + 1).toString(),
+                                    style = MaterialTheme.typography.displayMedium,
+                                    color = Color.White.copy(alpha = 0.85f),
+                                )
+                                if (nextRowIndicator != null) {
+                                    val nColor = when {
+                                        nextRowIndicator.startsWith('K', ignoreCase = true) -> Color(0xFF4ADE80)
+                                        nextRowIndicator.startsWith('P', ignoreCase = true) -> Color(0xFFF87171)
+                                        else -> Color(0xFF93C5FD)
+                                    }
+                                    val nStyle = when {
+                                        nextRowIndicator.length <= 3 -> MaterialTheme.typography.headlineMedium
+                                        nextRowIndicator.length <= 8 -> MaterialTheme.typography.titleLarge
+                                        else -> MaterialTheme.typography.titleMedium
+                                    }
+                                    Text(
+                                        text = nextRowIndicator.take(20),
+                                        style = nStyle,
+                                        color = nColor,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
+                            }
+                            Text(
+                                "next row",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.6f),
+                            )
+                        }
                     }
                 }
-                if (patternIndicator != null) {
-                    val indicatorColor = when {
-                        patternIndicator.startsWith('K', ignoreCase = true) -> Color(0xFF4ADE80)
-                        patternIndicator.startsWith('P', ignoreCase = true) -> Color(0xFFF87171)
-                        else -> Color(0xFF93C5FD)
+                else -> {
+                    // View 1 (default): count + pattern indicator, "rows completed" label below
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = count.toString(),
+                                    style = MaterialTheme.typography.displayLarge,
+                                    color = Color.White,
+                                    textAlign = TextAlign.Center,
+                                )
+                                if (hintVisible) {
+                                    Text(
+                                        "−1",
+                                        style = MaterialTheme.typography.displayLarge,
+                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                                    )
+                                }
+                            }
+                            if (patternIndicator != null) {
+                                val indicatorColor = when {
+                                    patternIndicator.startsWith('K', ignoreCase = true) -> Color(0xFF4ADE80)
+                                    patternIndicator.startsWith('P', ignoreCase = true) -> Color(0xFFF87171)
+                                    else -> Color(0xFF93C5FD)
+                                }
+                                val indicatorStyle = when {
+                                    patternIndicator.length <= 3 -> MaterialTheme.typography.displayMedium
+                                    patternIndicator.length <= 8 -> MaterialTheme.typography.headlineMedium
+                                    else -> MaterialTheme.typography.titleLarge
+                                }
+                                Text(
+                                    text = patternIndicator.take(20),
+                                    style = indicatorStyle,
+                                    color = indicatorColor,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(start = 16.dp),
+                                )
+                            }
+                        }
+                        Text(
+                            "rows completed",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.6f),
+                        )
                     }
-                    val indicatorStyle = when {
-                        patternIndicator.length <= 3 -> MaterialTheme.typography.displayMedium
-                        patternIndicator.length <= 8 -> MaterialTheme.typography.headlineMedium
-                        else -> MaterialTheme.typography.titleLarge
-                    }
-                    Text(
-                        text = patternIndicator.take(20),
-                        style = indicatorStyle,
-                        color = indicatorColor,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 16.dp),
-                    )
                 }
             }
         }

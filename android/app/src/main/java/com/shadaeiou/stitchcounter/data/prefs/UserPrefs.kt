@@ -3,6 +3,7 @@ package com.shadaeiou.stitchcounter.data.prefs
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +17,7 @@ class UserPrefs(private val context: Context) {
     private val keyVolumeKeys = booleanPreferencesKey("volume_keys_enabled")
     private val keyCurrentProject = longPreferencesKey("current_project_id")
     private val keyCounterBg = longPreferencesKey("counter_bg_argb")
+    private val keyCounterView = intPreferencesKey("counter_view")
 
     val autoUpdateFlow: Flow<Boolean> = context.dataStore.data.map { it[keyAutoUpdate] ?: true }
     val volumeKeysFlow: Flow<Boolean> = context.dataStore.data.map { it[keyVolumeKeys] ?: true }
@@ -23,6 +25,7 @@ class UserPrefs(private val context: Context) {
     val counterBackgroundFlow: Flow<Long> = context.dataStore.data.map {
         it[keyCounterBg] ?: DEFAULT_COUNTER_BG
     }
+    val counterViewFlow: Flow<Int> = context.dataStore.data.map { it[keyCounterView] ?: 0 }
 
     suspend fun setAutoUpdate(value: Boolean) {
         context.dataStore.edit { it[keyAutoUpdate] = value }
@@ -35,6 +38,9 @@ class UserPrefs(private val context: Context) {
     }
     suspend fun setCounterBackground(argb: Long) {
         context.dataStore.edit { it[keyCounterBg] = argb }
+    }
+    suspend fun setCounterView(v: Int) {
+        context.dataStore.edit { it[keyCounterView] = v }
     }
 
     companion object {
