@@ -235,23 +235,28 @@ fun CounterArea(
         ) {
             when (counterView) {
                 1 -> {
-                    // View 2: rows completed (big, left) + next row (smaller, right)
+                    // View 2: rows completed (de-emphasised left) + next row (primary right)
                     Row(
+                        modifier = Modifier.fillMaxWidth(0.92f),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(28.dp),
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // Left — rows completed: smaller, 20 % transparent
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.weight(1f),
+                        ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
                                     text = count.toString(),
-                                    style = MaterialTheme.typography.displayLarge,
-                                    color = Color.White,
+                                    style = MaterialTheme.typography.displayMedium,
+                                    color = Color.White.copy(alpha = 0.8f),
                                     textAlign = TextAlign.Center,
                                 )
                                 if (hintVisible) {
                                     Text(
                                         "−1",
-                                        style = MaterialTheme.typography.displayLarge,
+                                        style = MaterialTheme.typography.displayMedium,
                                         color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
                                     )
                                 }
@@ -259,18 +264,22 @@ fun CounterArea(
                             Text(
                                 "rows completed",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.6f),
+                                color = Color.White.copy(alpha = 0.5f),
                             )
                         }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // Right — next row: larger relative prominence, full opacity
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.weight(1f),
+                        ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
                                 Text(
                                     text = (count + 1).toString(),
-                                    style = MaterialTheme.typography.displayMedium,
-                                    color = Color.White.copy(alpha = 0.85f),
+                                    style = MaterialTheme.typography.displaySmall,
+                                    color = Color.White,
                                 )
                                 if (nextRowIndicator != null) {
                                     val nColor = when {
@@ -294,7 +303,7 @@ fun CounterArea(
                             Text(
                                 "next row",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.6f),
+                                color = Color.White.copy(alpha = 0.7f),
                             )
                         }
                     }
