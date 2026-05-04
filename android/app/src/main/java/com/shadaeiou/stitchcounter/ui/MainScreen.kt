@@ -231,6 +231,7 @@ fun MainScreen(
                                     penWidthPx = penWidth,
                                     canRedo = canPatternRedo,
                                     onHighlightChange = vm::setPatternHighlightRange,
+                                    onPinContent = vm::addPinnedNote,
                                     onAddStroke = { points -> vm.addPatternStroke(points, colorArgb = penColor, widthPx = penWidth) },
                                     onEraseAt = { x, y -> vm.erasePatternAt(x, y, toleranceNorm = 0.025f) },
                                     onUndoStroke = vm::undoLastPatternStroke,

@@ -13,6 +13,17 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 34,
+        versionName = "0.1.34",
+        notes = listOf(
+            "Pattern highlight colour changed to hot pink; drag-handle bars are now thinner while the paragraph outline stays bold.",
+            "Tap ✓ after adjusting a highlight to confirm it — handles disappear and you can scroll freely. Long-press again to re-enter selection mode.",
+            "Tap 📌 next to the highlighted text to pin the plain text directly to the counter ribbon.",
+            "Eraser tool in the pattern pane now shows a proper eraser icon instead of ✕.",
+            "View 2: both counters are larger — rows completed uses displayLarge, next row uses displayMedium.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 33,
         versionName = "0.1.33",
         notes = listOf(

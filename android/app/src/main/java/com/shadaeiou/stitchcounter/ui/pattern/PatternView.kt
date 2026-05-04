@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Close
@@ -66,30 +67,48 @@ ul, ol { padding-left: 24px; }
 li { margin: 3px 0; }
 #empty-msg { padding: 24px 16px; color: #666; font-size: 15px; }
 .hl {
-  outline: 3px solid #22c55e;
-  background: rgba(34,197,94,0.12);
+  outline: 3px solid #FF69B4;
+  background: rgba(255, 105, 180, 0.12);
   border-radius: 4px;
   padding: 2px 4px;
 }
 .dm { opacity: 0.18; }
 .drag-handle {
-  display: none; position: fixed; left: 0; right: 0; height: 22px;
-  background: rgba(34,197,94,0.55); border-top: 2px solid #22c55e;
-  border-bottom: 2px solid #22c55e; z-index: 200; touch-action: none; cursor: ns-resize;
+  display: none; position: fixed; left: 0; right: 0; height: 12px;
+  background: rgba(255, 105, 180, 0.4);
+  border-top: 2px solid #FF69B4;
+  border-bottom: 2px solid #FF69B4;
+  z-index: 200; touch-action: none; cursor: ns-resize;
 }
 .drag-handle::after {
-  content: ''; display: block; width: 36px; height: 4px;
-  background: rgba(255,255,255,0.6); border-radius: 2px; margin: 7px auto;
+  content: ''; display: block; width: 28px; height: 2px;
+  background: rgba(255, 255, 255, 0.6); border-radius: 1px; margin: 4px auto;
 }
+#hl-action-bar {
+  display: none; position: fixed; right: 8px; z-index: 300;
+  background: rgba(20, 20, 20, 0.93); border-radius: 10px;
+  padding: 6px 4px; flex-direction: column; align-items: center; gap: 6px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.7);
+}
+.hl-btn {
+  background: none; border: none; cursor: pointer; padding: 6px;
+  font-size: 20px; line-height: 1; border-radius: 8px; display: block;
+}
+.hl-btn:active { background: rgba(255,255,255,0.1); }
 </style>
 </head>
 <body>
 <div id="top-handle" class="drag-handle"></div>
 <div id="bot-handle" class="drag-handle"></div>
+<div id="hl-action-bar">
+  <button class="hl-btn" id="pin-btn">📌</button>
+  <button class="hl-btn" id="check-btn" style="color:#4ADE80; font-weight:bold; font-size:26px;">✓</button>
+</div>
 <div id="content"><div id="empty-msg">No pattern saved. Tap <strong>Edit</strong> to add a pattern.</div></div>
 <script>
 var blocks = [];
 var selStart = -1, selEnd = -1;
+var inSelectionMode = false;
 
 function indexBlocks() {
   blocks = Array.from(document.getElementById('content').children);
@@ -98,23 +117,44 @@ function indexBlocks() {
 
 function applyHighlight(s, e) {
   selStart = s; selEnd = e;
+  inSelectionMode = true;
   blocks.forEach(function(b, i) {
     var inRange = i >= s && i <= e;
     b.classList.toggle('hl', inRange);
     b.classList.toggle('dm', !inRange);
   });
   positionHandles();
+  updateActionBar();
 }
 
 function clearHighlight() {
   selStart = -1; selEnd = -1;
+  inSelectionMode = false;
   blocks.forEach(function(b) { b.classList.remove('hl', 'dm'); });
   document.getElementById('top-handle').style.display = 'none';
   document.getElementById('bot-handle').style.display = 'none';
+  document.getElementById('hl-action-bar').style.display = 'none';
+}
+
+function confirmHighlight() {
+  inSelectionMode = false;
+  document.getElementById('top-handle').style.display = 'none';
+  document.getElementById('bot-handle').style.display = 'none';
+  document.getElementById('hl-action-bar').style.display = 'none';
+}
+
+function getHighlightedText() {
+  if (selStart < 0) return '';
+  var parts = [];
+  for (var i = selStart; i <= Math.min(selEnd, blocks.length - 1); i++) {
+    var txt = (blocks[i].innerText || '').replace(/\s+/g, ' ').trim();
+    if (txt) parts.push(txt);
+  }
+  return parts.join(' ');
 }
 
 function positionHandles() {
-  if (selStart < 0 || !blocks[selStart]) {
+  if (selStart < 0 || !inSelectionMode || !blocks[selStart]) {
     document.getElementById('top-handle').style.display = 'none';
     document.getElementById('bot-handle').style.display = 'none';
     return;
@@ -124,12 +164,35 @@ function positionHandles() {
   var th = document.getElementById('top-handle');
   var bh = document.getElementById('bot-handle');
   th.style.display = 'block';
-  th.style.top = Math.max(0, tRect.top - 11) + 'px';
+  th.style.top = Math.max(0, tRect.top - 6) + 'px';
   bh.style.display = 'block';
-  bh.style.top = Math.min(window.innerHeight - 22, bRect.bottom - 11) + 'px';
+  bh.style.top = Math.min(window.innerHeight - 12, bRect.bottom - 6) + 'px';
 }
 
-window.addEventListener('scroll', positionHandles, {passive: true});
+function updateActionBar() {
+  var bar = document.getElementById('hl-action-bar');
+  if (selStart < 0 || !inSelectionMode || !blocks[selStart]) {
+    bar.style.display = 'none';
+    return;
+  }
+  var rect = blocks[selStart].getBoundingClientRect();
+  var top = Math.max(8, Math.min(rect.top + 4, window.innerHeight - 120));
+  bar.style.top = top + 'px';
+  bar.style.display = 'flex';
+}
+
+window.addEventListener('scroll', function() {
+  positionHandles();
+  updateActionBar();
+}, {passive: true});
+
+document.getElementById('pin-btn').addEventListener('click', function() {
+  var text = getHighlightedText();
+  if (text && typeof Android !== 'undefined') Android.onPin(text);
+});
+document.getElementById('check-btn').addEventListener('click', function() {
+  confirmHighlight();
+});
 
 function setContent(html, range) {
   var c = document.getElementById('content');
@@ -140,12 +203,16 @@ function setContent(html, range) {
     var parts = range.split(',');
     var s = parseInt(parts[0]), e = parseInt(parts[1]);
     if (!isNaN(s) && !isNaN(e) && s >= 0 && e >= s && e < blocks.length) {
-      applyHighlight(s, e);
+      selStart = s; selEnd = e;
+      // Restore in confirmed mode — highlight visible, handles/bar hidden.
+      blocks.forEach(function(b, i) {
+        b.classList.toggle('hl', i >= s && i <= e);
+        b.classList.toggle('dm', !(i >= s && i <= e));
+      });
     }
   }
 }
 
-// Long-press paragraph selection
 var lpTimer = null, lpStartX = 0, lpStartY = 0;
 document.getElementById('content').addEventListener('touchstart', function(e) {
   var t = e.touches[0];
@@ -169,12 +236,12 @@ document.getElementById('content').addEventListener('touchmove', function(e) {
   if (Math.abs(t.clientX - lpStartX) > 10 || Math.abs(t.clientY - lpStartY) > 10) clearTimeout(lpTimer);
 }, {passive: true});
 
-// Drag handles
 function attachHandle(id, isTop) {
   var el = document.getElementById(id);
   el.addEventListener('touchstart', function(e) { e.stopPropagation(); }, {passive: false});
   el.addEventListener('touchmove', function(e) {
     e.preventDefault(); e.stopPropagation();
+    if (!inSelectionMode) return;
     var cy = e.touches[0].clientY;
     var bestIdx = -1, bestDist = Infinity;
     blocks.forEach(function(b, i) {
@@ -202,10 +269,18 @@ attachHandle('bot-handle', false);
 
 // ── JS bridge ─────────────────────────────────────────────────────────────────
 
-private class ViewerBridge(private val onHighlight: (String) -> Unit) {
+private class ViewerBridge(
+    private val onHighlight: (String) -> Unit,
+    private val onPin: (String) -> Unit,
+) {
     @JavascriptInterface
     fun onHighlightChanged(range: String) {
         Handler(Looper.getMainLooper()).post { onHighlight(range) }
+    }
+
+    @JavascriptInterface
+    fun onPin(text: String) {
+        Handler(Looper.getMainLooper()).post { onPin(text) }
     }
 }
 
@@ -222,6 +297,7 @@ fun PatternView(
     penWidthPx: Float,
     canRedo: Boolean,
     onHighlightChange: (String) -> Unit,
+    onPinContent: (String) -> Unit,
     onAddStroke: (List<StrokePoint>) -> Unit,
     onEraseAt: (Float, Float) -> Unit,
     onUndoStroke: () -> Unit,
@@ -234,7 +310,7 @@ fun PatternView(
     val webViewRef = remember { mutableStateOf<WebView?>(null) }
     val scrollY = remember { mutableIntStateOf(0) }
     var webViewReady by remember { mutableStateOf(false) }
-    val bridge = remember { ViewerBridge(onHighlightChange) }
+    val bridge = remember { ViewerBridge(onHighlightChange, onPinContent) }
 
     // Load or refresh content when html / range changes.
     LaunchedEffect(webViewReady, patternHtml, highlightRange) {
@@ -474,11 +550,11 @@ private fun PatternViewToolbar(
         }
         // Eraser
         IconButton(onClick = onSelectEraser, modifier = Modifier.size(40.dp)) {
-            Text(
-                "✕",
-                style = MaterialTheme.typography.titleMedium,
-                color = if (patternTool == Tool.Eraser) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface,
+            Icon(
+                Icons.AutoMirrored.Filled.Backspace,
+                contentDescription = "Eraser",
+                tint = if (patternTool == Tool.Eraser) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.onSurface,
             )
         }
         // Undo
@@ -495,7 +571,7 @@ private fun PatternViewToolbar(
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Clear highlight",
-                    tint = Color(0xFF22C55E),
+                    tint = Color(0xFFFF69B4),
                 )
             }
         }

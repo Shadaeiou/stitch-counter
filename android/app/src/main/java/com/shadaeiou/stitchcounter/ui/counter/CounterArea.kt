@@ -249,14 +249,14 @@ fun CounterArea(
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
                                     text = count.toString(),
-                                    style = MaterialTheme.typography.displayMedium,
+                                    style = MaterialTheme.typography.displayLarge,
                                     color = Color.White.copy(alpha = 0.8f),
                                     textAlign = TextAlign.Center,
                                 )
                                 if (hintVisible) {
                                     Text(
                                         "−1",
-                                        style = MaterialTheme.typography.displayMedium,
+                                        style = MaterialTheme.typography.displayLarge,
                                         color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
                                     )
                                 }
@@ -267,7 +267,7 @@ fun CounterArea(
                                 color = Color.White.copy(alpha = 0.5f),
                             )
                         }
-                        // Right — next row: larger relative prominence, full opacity
+                        // Right — next row: full opacity, slightly smaller than rows completed
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.weight(1f),
@@ -278,7 +278,7 @@ fun CounterArea(
                             ) {
                                 Text(
                                     text = (count + 1).toString(),
-                                    style = MaterialTheme.typography.displaySmall,
+                                    style = MaterialTheme.typography.displayMedium,
                                     color = Color.White,
                                 )
                                 if (nextRowIndicator != null) {

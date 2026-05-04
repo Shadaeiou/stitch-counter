@@ -171,6 +171,13 @@ class CounterViewModel(
         saveNotesList(current + NoteItem(id = UUID.randomUUID().toString(), text = trimmed))
     }
 
+    fun addPinnedNote(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+        val current = notes.value
+        saveNotesList(current + NoteItem(id = UUID.randomUUID().toString(), text = trimmed, pinned = true))
+    }
+
     fun deleteNote(id: String) {
         val current = notes.value
         saveNotesList(current.filter { it.id != id })
