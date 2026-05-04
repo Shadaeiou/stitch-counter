@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shadaeiou.stitchcounter.ui.counter.CounterArea
 import com.shadaeiou.stitchcounter.ui.counter.HistoryOverlay
+import com.shadaeiou.stitchcounter.ui.pattern.PatternView
 import com.shadaeiou.stitchcounter.ui.pdf.PdfViewer
 import com.shadaeiou.stitchcounter.ui.pdf.PenSettingsPanel
 import com.shadaeiou.stitchcounter.ui.pdf.copyPdfToInternal
@@ -79,6 +81,11 @@ fun MainScreen(
     val canRedoStroke by vm.canRedo.collectAsStateWithLifecycle()
     val pinnedNotes by vm.pinnedNotes.collectAsStateWithLifecycle()
     val knitPattern by vm.knitPattern.collectAsStateWithLifecycle()
+    val patternHtml by vm.patternHtml.collectAsStateWithLifecycle()
+    val patternHighlightRange by vm.patternHighlightRange.collectAsStateWithLifecycle()
+    val patternTool by vm.patternTool.collectAsStateWithLifecycle()
+    val patternStrokes by vm.patternStrokes.collectAsStateWithLifecycle()
+    val canPatternRedo by vm.canPatternRedo.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -87,10 +94,11 @@ fun MainScreen(
     var inverted by remember { mutableStateOf(false) }
     var historyVisible by remember { mutableStateOf(false) }
     var pdfHidden by remember { mutableStateOf(false) }
+    var patternHidden by remember { mutableStateOf(true) }
     var confirmRemovePdf by remember { mutableStateOf(false) }
     var penPanelVisible by remember { mutableStateOf(false) }
     var counterSettingsVisible by remember { mutableStateOf(false) }
-    // Pane split as a fraction of the splittable region (counter + pdf area).
+    // Pane split as a fraction of the splittable region (counter + bottom pane).
     var counterFraction by remember { mutableStateOf(0.5f) }
 
     val pdfPicker = rememberLauncherForActivityResult(
@@ -104,7 +112,15 @@ fun MainScreen(
     }
 
     val hasPdf = !project?.pdfPath.isNullOrBlank()
+    val hasPattern = patternHtml.isNotBlank()
+    // Showing PDF hides pattern and vice-versa (mutually exclusive bottom pane).
     val showPdf = hasPdf && !pdfHidden
+    val showPattern = hasPattern && !patternHidden && !showPdf
+
+    // Auto-show pattern pane when a pattern is first saved and PDF is not shown.
+    LaunchedEffect(hasPattern) {
+        if (hasPattern && !hasPdf) patternHidden = false
+    }
 
     fun resetWithUndo() {
         vm.reset()
@@ -131,12 +147,13 @@ fun MainScreen(
                 val dividerHeightPx = with(density) { DIVIDER_HEIGHT_DP.dp.toPx() }
                 val splittableHeightPx = (totalHeightPx - dividerHeightPx).coerceAtLeast(1f)
                 Column(modifier = Modifier.fillMaxSize()) {
-                    val counterWeight = if (showPdf) counterFraction else 1f
+                    val showBottomPane = showPdf || showPattern
+                    val counterWeight = if (showBottomPane) counterFraction else 1f
                     Box(modifier = Modifier.weight(counterWeight).fillMaxWidth()) {
                         CounterArea(
                             count = project?.count ?: 0,
                             locked = locked,
-                            interactionsEnabled = tool == Tool.None,
+                            interactionsEnabled = tool == Tool.None && patternTool == Tool.None,
                             backgroundArgb = counterBackgroundArgb,
                             knitPattern = knitPattern,
                             counterView = counterView,
@@ -159,7 +176,7 @@ fun MainScreen(
                             onDismiss = { historyVisible = false },
                         )
                     }
-                    if (showPdf) {
+                    if (showBottomPane) {
                         PaneDivider(
                             heightDp = DIVIDER_HEIGHT_DP,
                             onDragDelta = { dyPx ->
@@ -169,40 +186,61 @@ fun MainScreen(
                             },
                         )
                         Box(modifier = Modifier.weight(1f - counterFraction).fillMaxWidth()) {
-                            PdfViewer(
-                                pdfPath = project?.pdfPath,
-                                page = project?.currentPage ?: 0,
-                                invertColors = inverted,
-                                tool = tool,
-                                strokes = strokes,
-                                penColorArgb = penColor,
-                                penWidthPx = penWidth,
-                                onPageChange = vm::setPage,
-                                onAddStroke = { points -> vm.addStroke(points, colorArgb = penColor, widthPx = penWidth) },
-                                onEraseAt = { x, y -> vm.eraseAt(x, y, toleranceNorm = 0.025f) },
-                                onTapToggleFullscreen = { /* fullscreen now via Hide PDF in toolbar */ },
-                                onRemovePdf = { confirmRemovePdf = true },
-                                canUndoStroke = strokes.isNotEmpty(),
-                                canRedoStroke = canRedoStroke,
-                                onUndoStroke = vm::undoLastStroke,
-                                onRedoStroke = vm::redoLastStroke,
-                                onPenDrawStart = { penPanelVisible = false },
-                                onUploadPdf = { pdfPicker.launch(arrayOf("application/pdf")) },
-                                onSelectPen = {
-                                    penPanelVisible = false
-                                    vm.selectTool(Tool.Pen)
-                                },
-                                onLongPressPen = {
-                                    if (tool != Tool.Pen) vm.selectTool(Tool.Pen)
-                                    penPanelVisible = true
-                                },
-                                onSelectEraser = {
-                                    penPanelVisible = false
-                                    vm.selectTool(Tool.Eraser)
-                                },
-                                onToggleInvert = { inverted = !inverted },
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                            if (showPdf) {
+                                PdfViewer(
+                                    pdfPath = project?.pdfPath,
+                                    page = project?.currentPage ?: 0,
+                                    invertColors = inverted,
+                                    tool = tool,
+                                    strokes = strokes,
+                                    penColorArgb = penColor,
+                                    penWidthPx = penWidth,
+                                    onPageChange = vm::setPage,
+                                    onAddStroke = { points -> vm.addStroke(points, colorArgb = penColor, widthPx = penWidth) },
+                                    onEraseAt = { x, y -> vm.eraseAt(x, y, toleranceNorm = 0.025f) },
+                                    onTapToggleFullscreen = { /* fullscreen via Hide PDF in toolbar */ },
+                                    onRemovePdf = { confirmRemovePdf = true },
+                                    canUndoStroke = strokes.isNotEmpty(),
+                                    canRedoStroke = canRedoStroke,
+                                    onUndoStroke = vm::undoLastStroke,
+                                    onRedoStroke = vm::redoLastStroke,
+                                    onPenDrawStart = { penPanelVisible = false },
+                                    onUploadPdf = { pdfPicker.launch(arrayOf("application/pdf")) },
+                                    onSelectPen = {
+                                        penPanelVisible = false
+                                        vm.selectTool(Tool.Pen)
+                                    },
+                                    onLongPressPen = {
+                                        if (tool != Tool.Pen) vm.selectTool(Tool.Pen)
+                                        penPanelVisible = true
+                                    },
+                                    onSelectEraser = {
+                                        penPanelVisible = false
+                                        vm.selectTool(Tool.Eraser)
+                                    },
+                                    onToggleInvert = { inverted = !inverted },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            } else {
+                                PatternView(
+                                    patternHtml = patternHtml,
+                                    highlightRange = patternHighlightRange,
+                                    strokes = patternStrokes,
+                                    patternTool = patternTool,
+                                    penColorArgb = penColor,
+                                    penWidthPx = penWidth,
+                                    canRedo = canPatternRedo,
+                                    onHighlightChange = vm::setPatternHighlightRange,
+                                    onAddStroke = { points -> vm.addPatternStroke(points, colorArgb = penColor, widthPx = penWidth) },
+                                    onEraseAt = { x, y -> vm.erasePatternAt(x, y, toleranceNorm = 0.025f) },
+                                    onUndoStroke = vm::undoLastPatternStroke,
+                                    onRedoStroke = vm::redoLastPatternStroke,
+                                    onSelectPen = { vm.selectPatternTool(Tool.Pen) },
+                                    onSelectEraser = { vm.selectPatternTool(Tool.Eraser) },
+                                    onEdit = onOpenPattern,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
                         }
                     }
                 }
@@ -211,8 +249,19 @@ fun MainScreen(
                 locked = locked,
                 hasPdf = hasPdf,
                 pdfHidden = pdfHidden,
+                hasPattern = hasPattern,
+                patternHidden = patternHidden,
                 onUploadPdf = { pdfPicker.launch(arrayOf("application/pdf")) },
-                onTogglePdfHidden = { pdfHidden = !pdfHidden },
+                onTogglePdfHidden = {
+                    pdfHidden = !pdfHidden
+                    // Show PDF → hide pattern; hide PDF → leave pattern as-is
+                    if (!pdfHidden) patternHidden = true
+                },
+                onTogglePatternHidden = {
+                    patternHidden = !patternHidden
+                    // Show pattern → hide PDF
+                    if (!patternHidden) pdfHidden = true
+                },
                 onOpenNotes = onOpenNotes,
                 onOpenPattern = onOpenPattern,
                 onToggleLock = vm::toggleLock,

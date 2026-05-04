@@ -77,6 +77,28 @@ class CounterViewModel(
         .map { it?.patternHtml.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
+    val patternHighlightRange: StateFlow<String> = _project
+        .map { it?.patternHighlightRange.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+
+    private val _patternTool = MutableStateFlow(Tool.None)
+    val patternTool: StateFlow<Tool> = _patternTool.asStateFlow()
+
+    private val _patternRedoStack = MutableStateFlow<List<Stroke>>(emptyList())
+    val canPatternRedo: StateFlow<Boolean> = _patternRedoStack
+        .map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    // Strokes for the pattern pane, stored at page = -1.
+    val patternStrokes: StateFlow<List<Stroke>> = _project
+        .map { p -> p?.id }
+        .distinctUntilChanged()
+        .flatMapLatest { id ->
+            if (id == null) flow { emit(emptyList<Stroke>()) }
+            else repository.observeStrokes(id, -1)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val strokes: StateFlow<List<Stroke>> = _project
         .map { p -> p?.let { it.id to it.currentPage } }
         .distinctUntilChanged()
@@ -173,6 +195,55 @@ class CounterViewModel(
     fun setPatternHtml(html: String) = viewModelScope.launch {
         val p = _project.value ?: return@launch
         _project.value = repository.setPatternHtml(p, html)
+    }
+
+    fun setPatternHighlightRange(range: String) = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        _project.value = repository.setPatternHighlightRange(p, range)
+    }
+
+    fun selectPatternTool(t: Tool) {
+        _patternTool.value = if (_patternTool.value == t) Tool.None else t
+    }
+
+    fun addPatternStroke(points: List<StrokePoint>, colorArgb: Long, widthPx: Float) = viewModelScope.launch {
+        if (points.size < 2) return@launch
+        val p = _project.value ?: return@launch
+        val current = patternStrokes.value
+        _patternRedoStack.value = emptyList()
+        repository.saveStrokes(p.id, -1, current + Stroke(points = points, colorArgb = colorArgb, widthPx = widthPx))
+    }
+
+    fun erasePatternAt(x: Float, y: Float, toleranceNorm: Float) = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        val current = patternStrokes.value
+        if (current.isEmpty()) return@launch
+        val tol2 = toleranceNorm.pow(2)
+        val filtered = current.filter { stroke ->
+            stroke.points.none { pt -> (pt.x - x).pow(2) + (pt.y - y).pow(2) < tol2 }
+        }
+        if (filtered.size != current.size) {
+            _patternRedoStack.value = emptyList()
+            repository.saveStrokes(p.id, -1, filtered)
+        }
+    }
+
+    fun undoLastPatternStroke() = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        val current = patternStrokes.value
+        if (current.isEmpty()) return@launch
+        val last = current.last()
+        _patternRedoStack.value = _patternRedoStack.value + last
+        repository.saveStrokes(p.id, -1, current.dropLast(1))
+    }
+
+    fun redoLastPatternStroke() = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        val redo = _patternRedoStack.value
+        if (redo.isEmpty()) return@launch
+        val toRestore = redo.last()
+        _patternRedoStack.value = redo.dropLast(1)
+        repository.saveStrokes(p.id, -1, patternStrokes.value + toRestore)
     }
 
     fun toggleLock() {

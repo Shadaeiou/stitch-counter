@@ -13,6 +13,18 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 33,
+        versionName = "0.1.33",
+        notes = listOf(
+            "Pattern split-screen view: saved patterns now appear in a resizable pane alongside the counter, just like PDFs.",
+            "Long-press any paragraph to highlight it and grey out the rest — great for tracking your current row.",
+            "Drag the green handle bars to adjust the highlighted section. Tap the × button to clear.",
+            "Pen and eraser annotations on the pattern pane, stored per project.",
+            "New toolbar slot 1 toggles PDF/Pattern pane visibility; when both are loaded a dropdown lets you switch between them.",
+            "Edit FAB inside the pattern pane jumps straight to the pattern editor.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 28,
         versionName = "0.1.28",
         notes = listOf(

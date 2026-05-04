@@ -19,6 +19,8 @@ data class Project(
     val knitPattern: String = "",
     // HTML-formatted pattern imported from a URL. Empty = none saved.
     val patternHtml: String = "",
+    // Highlighted paragraph range in pattern view: "startIdx,endIdx" or "".
+    val patternHighlightRange: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 )

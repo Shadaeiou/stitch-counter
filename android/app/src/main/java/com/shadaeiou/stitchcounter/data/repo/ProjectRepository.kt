@@ -96,6 +96,12 @@ class ProjectRepository(
         return updated
     }
 
+    suspend fun setPatternHighlightRange(project: Project, range: String): Project {
+        val updated = project.copy(patternHighlightRange = range, updatedAt = System.currentTimeMillis())
+        projectDao.update(updated)
+        return updated
+    }
+
     suspend fun saveStrokes(projectId: Long, page: Int, strokes: List<Stroke>) {
         annotationDao.upsert(PageAnnotation(projectId = projectId, page = page, strokesJson = strokes.toJson()))
     }

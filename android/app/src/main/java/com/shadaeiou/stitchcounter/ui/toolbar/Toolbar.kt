@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Visibility
@@ -38,8 +40,11 @@ fun BottomToolbar(
     locked: Boolean,
     hasPdf: Boolean,
     pdfHidden: Boolean,
+    hasPattern: Boolean,
+    patternHidden: Boolean,
     onUploadPdf: () -> Unit,
     onTogglePdfHidden: () -> Unit,
+    onTogglePatternHidden: () -> Unit,
     onOpenNotes: () -> Unit,
     onOpenPattern: () -> Unit,
     onToggleLock: () -> Unit,
@@ -47,6 +52,7 @@ fun BottomToolbar(
     modifier: Modifier = Modifier,
 ) {
     var showUploadMenu by remember { mutableStateOf(false) }
+    var showPaneMenu by remember { mutableStateOf(false) }
 
     Row(
         modifier = modifier
@@ -57,23 +63,52 @@ fun BottomToolbar(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Slot 1 — Show/Hide PDF when a PDF is loaded; placeholder otherwise so
-        // the remaining buttons stay centred.
-        if (hasPdf) {
-            IconButton(onClick = onTogglePdfHidden) {
+        // Slot 1 — pane visibility toggle(s).
+        // When both are available a dropdown lets the user pick which to show.
+        when {
+            hasPdf && hasPattern -> Box {
+                IconButton(onClick = { showPaneMenu = true }) {
+                    Icon(
+                        if (!pdfHidden || !patternHidden) Icons.Default.VisibilityOff
+                        else Icons.Default.Visibility,
+                        contentDescription = "Toggle pane",
+                        tint = if (!pdfHidden || !patternHidden) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                DropdownMenu(expanded = showPaneMenu, onDismissRequest = { showPaneMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(if (pdfHidden) "Show PDF" else "Hide PDF") },
+                        leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null) },
+                        onClick = { showPaneMenu = false; onTogglePdfHidden() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (patternHidden) "Show Pattern" else "Hide Pattern") },
+                        leadingIcon = { Icon(Icons.Default.Article, contentDescription = null) },
+                        onClick = { showPaneMenu = false; onTogglePatternHidden() },
+                    )
+                }
+            }
+            hasPdf -> IconButton(onClick = onTogglePdfHidden) {
                 Icon(
                     if (pdfHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                     contentDescription = if (pdfHidden) "Show PDF" else "Hide PDF",
-                    tint = if (pdfHidden)
-                        MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface,
+                    tint = if (pdfHidden) MaterialTheme.colorScheme.primary
+                           else MaterialTheme.colorScheme.onSurface,
                 )
             }
-        } else {
-            Spacer(Modifier.size(48.dp))
+            hasPattern -> IconButton(onClick = onTogglePatternHidden) {
+                Icon(
+                    if (patternHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = if (patternHidden) "Show Pattern" else "Hide Pattern",
+                    tint = if (patternHidden) MaterialTheme.colorScheme.primary
+                           else MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            else -> Spacer(Modifier.size(48.dp))
         }
 
-        // Slot 2 — Upload / Import dropdown (second from left, always visible).
+        // Slot 2 — Upload / Import dropdown.
         Box {
             IconButton(onClick = { showUploadMenu = true }) {
                 Icon(Icons.Default.UploadFile, contentDescription = "Upload or import")
@@ -85,18 +120,12 @@ fun BottomToolbar(
                 DropdownMenuItem(
                     text = { Text("Upload PDF") },
                     leadingIcon = { Icon(Icons.Default.UploadFile, contentDescription = null) },
-                    onClick = {
-                        showUploadMenu = false
-                        onUploadPdf()
-                    },
+                    onClick = { showUploadMenu = false; onUploadPdf() },
                 )
                 DropdownMenuItem(
                     text = { Text("Import from web") },
                     leadingIcon = { Icon(Icons.Default.Language, contentDescription = null) },
-                    onClick = {
-                        showUploadMenu = false
-                        onOpenPattern()
-                    },
+                    onClick = { showUploadMenu = false; onOpenPattern() },
                 )
             }
         }
@@ -112,7 +141,7 @@ fun BottomToolbar(
                 if (locked) Icons.Default.Lock else Icons.Default.LockOpen,
                 contentDescription = if (locked) "Unlock" else "Lock",
                 tint = if (locked) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface,
+                       else MaterialTheme.colorScheme.onSurface,
             )
         }
 

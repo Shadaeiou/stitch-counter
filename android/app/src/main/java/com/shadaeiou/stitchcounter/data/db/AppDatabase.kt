@@ -16,9 +16,15 @@ private val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+private val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE projects ADD COLUMN patternHighlightRange TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 @Database(
     entities = [Project::class, HistoryEntry::class, PageAnnotation::class],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -35,7 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
                 AppDatabase::class.java,
                 "stitch-counter.db",
             )
-                .addMigrations(MIGRATION_3_4)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }
