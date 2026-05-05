@@ -97,6 +97,7 @@ fun MainScreen(
     var patternHidden by remember { mutableStateOf(true) }
     var confirmRemovePdf by remember { mutableStateOf(false) }
     var penPanelVisible by remember { mutableStateOf(false) }
+    var patternPenPanelVisible by remember { mutableStateOf(false) }
     var counterSettingsVisible by remember { mutableStateOf(false) }
     // Pane split as a fraction of the splittable region (counter + bottom pane).
     var counterFraction by remember { mutableStateOf(0.5f) }
@@ -232,12 +233,25 @@ fun MainScreen(
                                     canRedo = canPatternRedo,
                                     onHighlightChange = vm::setPatternHighlightRange,
                                     onPinContent = vm::addPinnedNote,
-                                    onAddStroke = { points -> vm.addPatternStroke(points, colorArgb = penColor, widthPx = penWidth) },
+                                    onAddStroke = { points ->
+                                        patternPenPanelVisible = false
+                                        vm.addPatternStroke(points, colorArgb = penColor, widthPx = penWidth)
+                                    },
                                     onEraseAt = { x, y -> vm.erasePatternAt(x, y, toleranceNorm = 0.025f) },
                                     onUndoStroke = vm::undoLastPatternStroke,
                                     onRedoStroke = vm::redoLastPatternStroke,
-                                    onSelectPen = { vm.selectPatternTool(Tool.Pen) },
-                                    onSelectEraser = { vm.selectPatternTool(Tool.Eraser) },
+                                    onSelectPen = {
+                                        patternPenPanelVisible = false
+                                        vm.selectPatternTool(Tool.Pen)
+                                    },
+                                    onLongPressPen = {
+                                        if (patternTool != Tool.Pen) vm.selectPatternTool(Tool.Pen)
+                                        patternPenPanelVisible = true
+                                    },
+                                    onSelectEraser = {
+                                        patternPenPanelVisible = false
+                                        vm.selectPatternTool(Tool.Eraser)
+                                    },
                                     onEdit = onOpenPattern,
                                     modifier = Modifier.fillMaxSize(),
                                 )
@@ -271,6 +285,26 @@ fun MainScreen(
         }
 
         if (penPanelVisible && tool == Tool.Pen) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                PenSettingsPanel(
+                    selectedColorArgb = penColor,
+                    widthPx = penWidth,
+                    onColorChange = vm::setPenColor,
+                    onWidthChange = vm::setPenWidth,
+                    onDarkBackground = true,
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 64.dp),
+                )
+            }
+        }
+
+        if (patternPenPanelVisible && patternTool == Tool.Pen) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()

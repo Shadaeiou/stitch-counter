@@ -8,6 +8,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -336,6 +337,7 @@ fun PatternView(
     onUndoStroke: () -> Unit,
     onRedoStroke: () -> Unit,
     onSelectPen: () -> Unit,
+    onLongPressPen: () -> Unit,
     onSelectEraser: () -> Unit,
     onEdit: () -> Unit,
     modifier: Modifier = Modifier,
@@ -397,6 +399,7 @@ fun PatternView(
             canRedo = canRedo,
             hasHighlight = highlightRange.isNotEmpty(),
             onSelectPen = onSelectPen,
+            onLongPressPen = onLongPressPen,
             onSelectEraser = onSelectEraser,
             onUndo = onUndoStroke,
             onRedo = onRedoStroke,
@@ -556,6 +559,7 @@ private fun PatternViewToolbar(
     canRedo: Boolean,
     hasHighlight: Boolean,
     onSelectPen: () -> Unit,
+    onLongPressPen: () -> Unit,
     onSelectEraser: () -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
@@ -572,11 +576,16 @@ private fun PatternViewToolbar(
         horizontalArrangement = Arrangement.spacedBy(0.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Pen
-        IconButton(onClick = onSelectPen, modifier = Modifier.size(40.dp)) {
+        // Pen (long-press for color/thickness options)
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .combinedClickable(onClick = onSelectPen, onLongClick = onLongPressPen),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
                 Icons.Default.Create,
-                contentDescription = "Pen",
+                contentDescription = "Pen (long-press for options)",
                 tint = if (patternTool == Tool.Pen) MaterialTheme.colorScheme.primary
                        else MaterialTheme.colorScheme.onSurface,
             )

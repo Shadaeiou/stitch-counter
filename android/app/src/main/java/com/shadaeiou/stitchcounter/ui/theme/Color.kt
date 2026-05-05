@@ -27,7 +27,13 @@ val CounterBackgrounds: List<CounterBgChoice> = listOf(
 data class PenColorChoice(val label: String, val argb: Long)
 
 val PenColors: List<PenColorChoice> = listOf(
-    PenColorChoice("Red",   0xFFEF4444L),
-    PenColorChoice("Black", 0xFF000000L),
-    PenColorChoice("Blue",  0xFF2563EBL),
+    PenColorChoice("Red",        0xFFEF4444L),
+    PenColorChoice("Light Pink", 0xFFFFB6C1L),
+    PenColorChoice("Gold",       0xFFFFD700L),
+    PenColorChoice("Kelly Green",0xFF4CBB17L),
+    PenColorChoice("Cyan",       0xFF00CED1L),
+    PenColorChoice("Light Blue", 0xFFADD8E6L),
+    PenColorChoice("Silver",     0xFFC0C0C0L),
+    PenColorChoice("Black",      0xFF000000L),
+    PenColorChoice("White",      0xFFFFFFFFL),
 )

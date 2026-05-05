@@ -1,12 +1,15 @@
 package com.shadaeiou.stitchcounter
 
+import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
@@ -34,6 +37,7 @@ import com.shadaeiou.stitchcounter.update.DownloadResult
 import com.shadaeiou.stitchcounter.update.UpdateCheckResult
 import com.shadaeiou.stitchcounter.update.UpdateInfo
 import com.shadaeiou.stitchcounter.update.Updater
+import com.shadaeiou.stitchcounter.update.postUpdateNotification
 import com.shadaeiou.stitchcounter.viewmodel.CounterViewModel
 import kotlinx.coroutines.launch
 
@@ -103,11 +107,27 @@ private fun AppRoot(activityVm: CounterViewModel) {
     var pending by remember { mutableStateOf<UpdateInfo?>(null) }
     var screen by remember { mutableStateOf(Screen.Main) }
 
+    // Runtime permission for notifications (Android 13+). We request it once so
+    // the OS can post the update notification to the tray even when app is closed.
+    val notifPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* result handled silently — notification posted on next check */ }
+
     LaunchedEffect(autoUpdate) {
         if (!autoUpdate) return@LaunchedEffect
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val perm = android.Manifest.permission.POST_NOTIFICATIONS
+            val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                context, perm,
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (!granted) notifPermLauncher.launch(perm)
+        }
         val updater = Updater(context.applicationContext, REPO_OWNER, REPO_NAME)
         val result = updater.checkForUpdate(BuildConfig.VERSION_CODE)
-        if (result is UpdateCheckResult.Available) pending = result.info
+        if (result is UpdateCheckResult.Available) {
+            pending = result.info
+            postUpdateNotification(context.applicationContext, result.info)
+        }
     }
 
     val notes by activityVm.notes.collectAsState(initial = emptyList())

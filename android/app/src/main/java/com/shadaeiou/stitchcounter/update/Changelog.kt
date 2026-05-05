@@ -13,6 +13,15 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 36,
+        versionName = "0.1.36",
+        notes = listOf(
+            "Pen color palette expanded to 9 colors (red, light pink, gold, kelly green, cyan, light blue, silver, black, white) — applies to both PDF and pattern panes.",
+            "Long-press the pen icon in the pattern pane to open the color and thickness panel.",
+            "Push notification posted when an update is available — tap it to open the app and install.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 35,
         versionName = "0.1.35",
         notes = listOf(
