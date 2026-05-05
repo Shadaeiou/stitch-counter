@@ -249,15 +249,23 @@ fun CounterArea(
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
                                     text = count.toString(),
-                                    style = MaterialTheme.typography.displayLarge,
+                                    fontSize = counterFontSize(count.toString().length),
+                                    lineHeight = counterFontSize(count.toString().length),
+                                    fontWeight = FontWeight.Light,
                                     color = Color.White.copy(alpha = 0.8f),
                                     textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    softWrap = false,
                                 )
                                 if (hintVisible) {
                                     Text(
                                         "−1",
-                                        style = MaterialTheme.typography.displayLarge,
+                                        fontSize = counterFontSize(count.toString().length),
+                                        lineHeight = counterFontSize(count.toString().length),
+                                        fontWeight = FontWeight.Light,
                                         color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                                        maxLines = 1,
+                                        softWrap = false,
                                     )
                                 }
                             }
@@ -278,8 +286,12 @@ fun CounterArea(
                             ) {
                                 Text(
                                     text = (count + 1).toString(),
-                                    style = MaterialTheme.typography.displayMedium,
+                                    fontSize = counterFontSize((count + 1).toString().length),
+                                    lineHeight = counterFontSize((count + 1).toString().length),
+                                    fontWeight = FontWeight.Light,
                                     color = Color.White,
+                                    maxLines = 1,
+                                    softWrap = false,
                                 )
                                 if (nextRowIndicator != null) {
                                     val nColor = when {
@@ -315,15 +327,23 @@ fun CounterArea(
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
                                     text = count.toString(),
-                                    style = MaterialTheme.typography.displayLarge,
+                                    fontSize = counterFontSize(count.toString().length),
+                                    lineHeight = counterFontSize(count.toString().length),
+                                    fontWeight = FontWeight.Light,
                                     color = Color.White,
                                     textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    softWrap = false,
                                 )
                                 if (hintVisible) {
                                     Text(
                                         "−1",
-                                        style = MaterialTheme.typography.displayLarge,
+                                        fontSize = counterFontSize(count.toString().length),
+                                        lineHeight = counterFontSize(count.toString().length),
+                                        fontWeight = FontWeight.Light,
                                         color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                                        maxLines = 1,
+                                        softWrap = false,
                                     )
                                 }
                             }
@@ -447,6 +467,13 @@ private fun AutoSizeNoteText(
             }
         },
     )
+}
+
+private fun counterFontSize(digitCount: Int): TextUnit = when {
+    digitCount <= 1 -> 180.sp
+    digitCount <= 2 -> 140.sp
+    digitCount <= 3 -> 100.sp
+    else -> 75.sp
 }
 
 private const val STEP_SEP = "|||"
