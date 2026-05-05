@@ -13,6 +13,13 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 37,
+        versionName = "0.1.37",
+        notes = listOf(
+            "Counter number scales down automatically for double and triple digits so it always fits on one line.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 36,
         versionName = "0.1.36",
         notes = listOf(
