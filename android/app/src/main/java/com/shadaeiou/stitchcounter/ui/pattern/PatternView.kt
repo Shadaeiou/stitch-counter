@@ -62,7 +62,7 @@ private val VIEWER_HTML = """
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #1a1a1a; color: #f0f0f0; font-family: sans-serif; font-size: 16px; }
-#content { padding: 12px 12px 80px; line-height: 1.7; word-break: break-word; }
+#content { padding: 12px 12px 120px; line-height: 1.7; word-break: break-word; }
 ul, ol { padding-left: 24px; }
 li { margin: 3px 0; }
 #empty-msg { padding: 24px 16px; color: #666; font-size: 15px; }
@@ -84,33 +84,70 @@ li { margin: 3px 0; }
   content: ''; display: block; width: 28px; height: 2px;
   background: rgba(255, 255, 255, 0.6); border-radius: 1px; margin: 4px auto;
 }
+/* Floating action bar — horizontal pill, bottom-centre */
 #hl-action-bar {
-  display: none; position: fixed; right: 8px; z-index: 300;
-  background: rgba(20, 20, 20, 0.93); border-radius: 10px;
-  padding: 6px 4px; flex-direction: column; align-items: center; gap: 6px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.7);
+  display: none; position: fixed; bottom: 88px;
+  left: 50%; transform: translateX(-50%);
+  z-index: 300;
+  background: rgba(18, 18, 18, 0.96);
+  border-radius: 40px;
+  padding: 6px 10px;
+  flex-direction: row; align-items: center; gap: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.75);
+  border: 1px solid rgba(255,255,255,0.12);
+  white-space: nowrap;
 }
 .hl-btn {
-  background: none; border: none; cursor: pointer; padding: 6px;
-  font-size: 20px; line-height: 1; border-radius: 8px; display: block;
+  background: none; border: none; cursor: pointer;
+  padding: 10px 16px; line-height: 1;
+  border-radius: 32px; display: inline-flex;
+  align-items: center; justify-content: center;
+  font-size: 26px;
 }
-.hl-btn:active { background: rgba(255,255,255,0.1); }
+.hl-btn:active { background: rgba(255,255,255,0.12); }
+#check-btn { color: #4ADE80; font-weight: bold; font-size: 30px; }
+#pin-btn   { font-size: 26px; }
 </style>
 </head>
 <body>
 <div id="top-handle" class="drag-handle"></div>
 <div id="bot-handle" class="drag-handle"></div>
 <div id="hl-action-bar">
-  <button class="hl-btn" id="pin-btn">📌</button>
-  <button class="hl-btn" id="check-btn" style="color:#4ADE80; font-weight:bold; font-size:26px;">✓</button>
+  <button class="hl-btn" id="check-btn" title="Save highlight">&#10003;</button>
+  <button class="hl-btn" id="pin-btn"   title="Pin to counter">&#128204;</button>
 </div>
-<div id="content"><div id="empty-msg">No pattern saved. Tap <strong>Edit</strong> to add a pattern.</div></div>
+<div id="content">
+  <p id="empty-msg" style="color:#666;">No pattern saved. Tap <strong>Edit</strong> to add a pattern.</p>
+</div>
 <script>
 var blocks = [];
 var selStart = -1, selEnd = -1;
 var inSelectionMode = false;
 
+// Split any block element that has <br> children into separate <p> elements
+// so each visual sentence/line is independently selectable.
+function splitBrBlocks() {
+  var c = document.getElementById('content');
+  var children = Array.from(c.children);
+  children.forEach(function(el) {
+    var tag = el.tagName.toLowerCase();
+    if (tag === 'ul' || tag === 'ol' || tag === 'table') return;
+    if (!el.querySelector('br')) return;
+    var parts = el.innerHTML.split(/<br\s*\/?>/i);
+    parts.forEach(function(part) {
+      var tmp = document.createElement('div');
+      tmp.innerHTML = part;
+      if (!tmp.textContent.trim()) return;
+      var newEl = document.createElement('p');
+      newEl.innerHTML = part.trim();
+      c.insertBefore(newEl, el);
+    });
+    c.removeChild(el);
+  });
+}
+
 function indexBlocks() {
+  splitBrBlocks();
   blocks = Array.from(document.getElementById('content').children);
   blocks.forEach(function(b, i) { b.setAttribute('data-idx', i); });
 }
@@ -124,7 +161,7 @@ function applyHighlight(s, e) {
     b.classList.toggle('dm', !inRange);
   });
   positionHandles();
-  updateActionBar();
+  showActionBar();
 }
 
 function clearHighlight() {
@@ -169,34 +206,26 @@ function positionHandles() {
   bh.style.top = Math.min(window.innerHeight - 12, bRect.bottom - 6) + 'px';
 }
 
-function updateActionBar() {
-  var bar = document.getElementById('hl-action-bar');
-  if (selStart < 0 || !inSelectionMode || !blocks[selStart]) {
-    bar.style.display = 'none';
-    return;
-  }
-  var rect = blocks[selStart].getBoundingClientRect();
-  var top = Math.max(8, Math.min(rect.top + 4, window.innerHeight - 120));
-  bar.style.top = top + 'px';
-  bar.style.display = 'flex';
+function showActionBar() {
+  document.getElementById('hl-action-bar').style.display =
+    (selStart >= 0 && inSelectionMode) ? 'flex' : 'none';
 }
 
 window.addEventListener('scroll', function() {
   positionHandles();
-  updateActionBar();
 }, {passive: true});
 
+document.getElementById('check-btn').addEventListener('click', function() {
+  confirmHighlight();
+});
 document.getElementById('pin-btn').addEventListener('click', function() {
   var text = getHighlightedText();
   if (text && typeof Android !== 'undefined') Android.onPin(text);
 });
-document.getElementById('check-btn').addEventListener('click', function() {
-  confirmHighlight();
-});
 
 function setContent(html, range) {
   var c = document.getElementById('content');
-  c.innerHTML = html || '<div id="empty-msg">No pattern saved. Tap <strong>Edit</strong> to add a pattern.</div>';
+  c.innerHTML = html || '<p id="empty-msg" style="color:#666;">No pattern saved. Tap <strong>Edit</strong> to add a pattern.</p>';
   indexBlocks();
   clearHighlight();
   if (range && range.indexOf(',') >= 0) {
@@ -204,7 +233,7 @@ function setContent(html, range) {
     var s = parseInt(parts[0]), e = parseInt(parts[1]);
     if (!isNaN(s) && !isNaN(e) && s >= 0 && e >= s && e < blocks.length) {
       selStart = s; selEnd = e;
-      // Restore in confirmed mode — highlight visible, handles/bar hidden.
+      // Restore in confirmed mode: highlight visible, handles/bar hidden.
       blocks.forEach(function(b, i) {
         b.classList.toggle('hl', i >= s && i <= e);
         b.classList.toggle('dm', !(i >= s && i <= e));
@@ -213,6 +242,7 @@ function setContent(html, range) {
   }
 }
 
+// Long-press (500 ms) to select the nearest block element.
 var lpTimer = null, lpStartX = 0, lpStartY = 0;
 document.getElementById('content').addEventListener('touchstart', function(e) {
   var t = e.touches[0];
@@ -228,14 +258,16 @@ document.getElementById('content').addEventListener('touchstart', function(e) {
         if (typeof Android !== 'undefined') Android.onHighlightChanged(idx + ',' + idx);
       }
     }
-  }, 600);
+  }, 500);
 }, {passive: true});
-document.getElementById('content').addEventListener('touchend',  function() { clearTimeout(lpTimer); }, {passive: true});
+document.getElementById('content').addEventListener('touchend',
+  function() { clearTimeout(lpTimer); }, {passive: true});
 document.getElementById('content').addEventListener('touchmove', function(e) {
   var t = e.touches[0];
-  if (Math.abs(t.clientX - lpStartX) > 10 || Math.abs(t.clientY - lpStartY) > 10) clearTimeout(lpTimer);
+  if (Math.abs(t.clientX - lpStartX) > 8 || Math.abs(t.clientY - lpStartY) > 8) clearTimeout(lpTimer);
 }, {passive: true});
 
+// Drag handles to resize the selection.
 function attachHandle(id, isTop) {
   var el = document.getElementById(id);
   el.addEventListener('touchstart', function(e) { e.stopPropagation(); }, {passive: false});
@@ -251,9 +283,10 @@ function attachHandle(id, isTop) {
       if (d < bestDist) { bestDist = d; bestIdx = i; }
     });
     if (bestIdx < 0) return;
-    var ns, ne;
-    if (isTop) { ns = Math.min(bestIdx, selEnd < 0 ? bestIdx : selEnd); ne = Math.max(bestIdx, selEnd < 0 ? bestIdx : selEnd); }
-    else        { ns = Math.min(selStart < 0 ? bestIdx : selStart, bestIdx); ne = Math.max(selStart < 0 ? bestIdx : selStart, bestIdx); }
+    var ns = isTop ? Math.min(bestIdx, selEnd < 0 ? bestIdx : selEnd)
+                   : Math.min(selStart < 0 ? bestIdx : selStart, bestIdx);
+    var ne = isTop ? Math.max(bestIdx, selEnd < 0 ? bestIdx : selEnd)
+                   : Math.max(selStart < 0 ? bestIdx : selStart, bestIdx);
     if (ns !== selStart || ne !== selEnd) {
       applyHighlight(ns, ne);
       if (typeof Android !== 'undefined') Android.onHighlightChanged(ns + ',' + ne);

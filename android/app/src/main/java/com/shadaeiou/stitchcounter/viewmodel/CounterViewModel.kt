@@ -175,7 +175,8 @@ class CounterViewModel(
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return
         val current = notes.value
-        saveNotesList(current + NoteItem(id = UUID.randomUUID().toString(), text = trimmed, pinned = true))
+        val unpinned = current.map { it.copy(pinned = false) }
+        saveNotesList(unpinned + NoteItem(id = UUID.randomUUID().toString(), text = trimmed, pinned = true))
     }
 
     fun deleteNote(id: String) {
@@ -185,7 +186,15 @@ class CounterViewModel(
 
     fun togglePin(id: String) {
         val current = notes.value
-        saveNotesList(current.map { if (it.id == id) it.copy(pinned = !it.pinned) else it })
+        val target = current.find { it.id == id } ?: return
+        val newPinned = !target.pinned
+        saveNotesList(current.map { note ->
+            when {
+                note.id == id -> note.copy(pinned = newPinned)
+                newPinned -> note.copy(pinned = false)
+                else -> note
+            }
+        })
     }
 
     fun updateNote(id: String, text: String) {

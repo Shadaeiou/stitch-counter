@@ -13,6 +13,15 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 35,
+        versionName = "0.1.35",
+        notes = listOf(
+            "Long-pressing a line now selects just that sentence or paragraph between line breaks, not the whole block.",
+            "Floating action bar is now a horizontal pill centered at the bottom — ✓ saves the highlight, 📌 pins the text to the counter ribbon.",
+            "Only 1 pinned note at a time: pinning from the pattern view or Notes screen replaces any existing pin.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 34,
         versionName = "0.1.34",
         notes = listOf(
