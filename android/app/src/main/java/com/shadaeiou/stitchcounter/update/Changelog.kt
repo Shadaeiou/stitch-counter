@@ -13,6 +13,17 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 42,
+        versionName = "0.1.42",
+        notes = listOf(
+            "Project title auto-capitalizes the first letter of every word as you type.",
+            "Photo picker now opens a crop screen — drag the corner handles to adjust the crop before saving.",
+            "New \"Pattern secured\" checkbox (above Yarn bought) and \"Yarn weight\" field (above Needle size) on each project.",
+            "Upload a pattern PDF directly to a project — tap View PDF to open it read-only with pinch-to-zoom and page navigation; tap ✕ to exit.",
+            "Save button added at the bottom of the project detail form.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 41,
         versionName = "0.1.41",
         notes = listOf(
