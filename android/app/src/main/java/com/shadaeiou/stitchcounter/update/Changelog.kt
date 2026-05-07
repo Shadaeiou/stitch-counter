@@ -13,6 +13,16 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 39,
+        versionName = "0.1.39",
+        notes = listOf(
+            "New Projects tracker: tap the bookmark icon in the toolbar to manage all your knit and crochet projects.",
+            "Each project tracks title, craft type (knit/crochet), status (In Queue / In Progress / Finished), yarn-bought checkbox, needle/hook size, pattern source, notes, and a photo.",
+            "Projects list has filter chips by status; tap + to add a project.",
+            "Project detail auto-saves all fields when you navigate back.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 38,
         versionName = "0.1.38",
         notes = listOf(

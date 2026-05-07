@@ -31,6 +31,7 @@ import androidx.lifecycle.lifecycleScope
 import com.shadaeiou.stitchcounter.ui.MainScreen
 import com.shadaeiou.stitchcounter.ui.notes.NotesScreen
 import com.shadaeiou.stitchcounter.ui.pattern.PatternScreen
+import com.shadaeiou.stitchcounter.ui.projects.ProjectsScreen
 import com.shadaeiou.stitchcounter.ui.settings.SettingsScreen
 import com.shadaeiou.stitchcounter.ui.theme.StitchCounterTheme
 import com.shadaeiou.stitchcounter.update.DownloadResult
@@ -39,6 +40,7 @@ import com.shadaeiou.stitchcounter.update.UpdateInfo
 import com.shadaeiou.stitchcounter.update.Updater
 import com.shadaeiou.stitchcounter.update.postUpdateNotification
 import com.shadaeiou.stitchcounter.viewmodel.CounterViewModel
+import com.shadaeiou.stitchcounter.viewmodel.KnitProjectViewModel
 import kotlinx.coroutines.launch
 
 private const val REPO_OWNER = "shadaeiou"
@@ -47,6 +49,7 @@ private const val REPO_NAME = "stitch-counter"
 class MainActivity : ComponentActivity() {
 
     val counterVm: CounterViewModel by viewModels { CounterViewModel.Factory() }
+    val knitProjectVm: KnitProjectViewModel by viewModels { KnitProjectViewModel.Factory() }
 
     @Volatile private var volumeKeysEnabled: Boolean = true
 
@@ -62,7 +65,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             StitchCounterTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AppRoot(activityVm = counterVm)
+                    AppRoot(activityVm = counterVm, knitProjectVm = knitProjectVm)
                 }
             }
         }
@@ -92,7 +95,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AppRoot(activityVm: CounterViewModel) {
+private fun AppRoot(activityVm: CounterViewModel, knitProjectVm: KnitProjectViewModel) {
     val app = StitchCounterApp.instance
     val prefs = app.prefs
 
@@ -141,6 +144,7 @@ private fun AppRoot(activityVm: CounterViewModel) {
             onOpenSettings = { screen = Screen.Settings },
             onOpenNotes = { screen = Screen.Notes },
             onOpenPattern = { screen = Screen.Pattern },
+            onOpenProjects = { screen = Screen.Projects },
         )
         Screen.Notes -> {
             BackHandler { screen = Screen.Main }
@@ -175,6 +179,13 @@ private fun AppRoot(activityVm: CounterViewModel) {
                 onBack = { screen = Screen.Main },
             )
         }
+        Screen.Projects -> {
+            BackHandler { screen = Screen.Main }
+            ProjectsScreen(
+                vm = knitProjectVm,
+                onBack = { screen = Screen.Main },
+            )
+        }
     }
 
     pending?.let { info ->
@@ -205,4 +216,4 @@ private fun AppRoot(activityVm: CounterViewModel) {
     }
 }
 
-private enum class Screen { Main, Notes, Settings, Pattern }
+private enum class Screen { Main, Notes, Settings, Pattern, Projects }

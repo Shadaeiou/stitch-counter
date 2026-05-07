@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.shadaeiou.stitchcounter.data.db.entities.HistoryEntry
+import com.shadaeiou.stitchcounter.data.db.entities.KnitProject
 import com.shadaeiou.stitchcounter.data.db.entities.PageAnnotation
 import com.shadaeiou.stitchcounter.data.db.entities.Project
 
@@ -22,15 +23,38 @@ private val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+private val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS knit_projects (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                title TEXT NOT NULL DEFAULT '',
+                craftType TEXT NOT NULL DEFAULT 'knit',
+                status TEXT NOT NULL DEFAULT 'queue',
+                yarnBought INTEGER NOT NULL DEFAULT 0,
+                needleSize TEXT NOT NULL DEFAULT '',
+                patternSource TEXT NOT NULL DEFAULT '',
+                notes TEXT NOT NULL DEFAULT '',
+                photoPath TEXT,
+                createdAt INTEGER NOT NULL DEFAULT 0,
+                updatedAt INTEGER NOT NULL DEFAULT 0
+            )
+            """.trimIndent()
+        )
+    }
+}
+
 @Database(
-    entities = [Project::class, HistoryEntry::class, PageAnnotation::class],
-    version = 5,
+    entities = [Project::class, HistoryEntry::class, PageAnnotation::class, KnitProject::class],
+    version = 6,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun projectDao(): ProjectDao
     abstract fun historyDao(): HistoryDao
     abstract fun annotationDao(): AnnotationDao
+    abstract fun knitProjectDao(): KnitProjectDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -41,7 +65,7 @@ abstract class AppDatabase : RoomDatabase() {
                 AppDatabase::class.java,
                 "stitch-counter.db",
             )
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }

@@ -70,6 +70,7 @@ fun MainScreen(
     onOpenSettings: () -> Unit,
     onOpenNotes: () -> Unit,
     onOpenPattern: () -> Unit,
+    onOpenProjects: () -> Unit,
 ) {
     val project by vm.project.collectAsStateWithLifecycle()
     val locked by vm.locked.collectAsStateWithLifecycle()
@@ -279,6 +280,7 @@ fun MainScreen(
                 },
                 onOpenNotes = onOpenNotes,
                 onOpenPattern = onOpenPattern,
+                onOpenProjects = onOpenProjects,
                 onToggleLock = vm::toggleLock,
                 onOpenSettings = onOpenSettings,
             )

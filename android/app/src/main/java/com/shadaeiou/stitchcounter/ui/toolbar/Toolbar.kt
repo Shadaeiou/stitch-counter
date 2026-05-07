@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -47,6 +48,7 @@ fun BottomToolbar(
     onTogglePatternHidden: () -> Unit,
     onOpenNotes: () -> Unit,
     onOpenPattern: () -> Unit,
+    onOpenProjects: () -> Unit,
     onToggleLock: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -130,12 +132,17 @@ fun BottomToolbar(
             }
         }
 
-        // Slot 3 — Notes (centre).
+        // Slot 3 — Notes.
         IconButton(onClick = onOpenNotes) {
             Icon(Icons.Default.Notes, contentDescription = "Notes")
         }
 
-        // Slot 4 — Lock.
+        // Slot 4 — Projects.
+        IconButton(onClick = onOpenProjects) {
+            Icon(Icons.Default.Bookmarks, contentDescription = "My projects")
+        }
+
+        // Slot 5 — Lock.
         IconButton(onClick = onToggleLock) {
             Icon(
                 if (locked) Icons.Default.Lock else Icons.Default.LockOpen,
