@@ -7,6 +7,7 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -552,6 +553,7 @@ private fun PatternStrokeCanvas(
 
 // ── Pattern view toolbar ──────────────────────────────────────────────────────
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PatternViewToolbar(
     patternTool: Tool,

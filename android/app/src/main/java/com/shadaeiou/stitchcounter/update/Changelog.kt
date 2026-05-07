@@ -13,6 +13,13 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 40,
+        versionName = "0.1.40",
+        notes = listOf(
+            "Fix compilation error introduced in build 36 (missing @OptIn for combinedClickable in the pattern toolbar) that caused builds 36–39 to fail.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 39,
         versionName = "0.1.39",
         notes = listOf(
