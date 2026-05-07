@@ -13,6 +13,14 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 38,
+        versionName = "0.1.38",
+        notes = listOf(
+            "Settings: new \"Clear finished pattern\" button — resets the counter, removes the PDF, erases all drawings and notes, and clears the knit pattern in one tap (with confirmation).",
+            "View 2: \"next row\" label renamed to \"current row\".",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 37,
         versionName = "0.1.37",
         notes = listOf(

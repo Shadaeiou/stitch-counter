@@ -64,6 +64,7 @@ fun SettingsScreen(
     onAutoUpdateChange: (Boolean) -> Unit,
     onVolumeKeysChange: (Boolean) -> Unit,
     onCounterBackgroundChange: (Long) -> Unit,
+    onClearPattern: () -> Unit,
     onBack: () -> Unit,
     repoOwner: String,
     repoName: String,
@@ -72,6 +73,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     var checkState by remember { mutableStateOf<CheckState>(CheckState.Idle) }
     var pending by remember { mutableStateOf<UpdateInfo?>(null) }
+    var showClearConfirm by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -113,6 +115,16 @@ fun SettingsScreen(
                 selectedArgb = counterBackgroundArgb,
                 onSelect = onCounterBackgroundChange,
             )
+
+            Spacer(Modifier.height(16.dp))
+
+            Text("Pattern", style = MaterialTheme.typography.titleMedium)
+            OutlinedButton(
+                onClick = { showClearConfirm = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Clear finished pattern")
+            }
 
             Spacer(Modifier.height(16.dp))
 
@@ -172,6 +184,30 @@ fun SettingsScreen(
                 }
             },
             onDismiss = { pending = null },
+        )
+    }
+
+    if (showClearConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirm = false },
+            title = { Text("Clear finished pattern?") },
+            text = {
+                Text("This will reset the counter, remove the PDF, clear all drawings and notes, and erase the knit pattern. This cannot be undone.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClearConfirm = false
+                        onClearPattern()
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) { Text("Clear") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirm = false }) { Text("Cancel") }
+            },
         )
     }
 }

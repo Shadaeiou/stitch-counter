@@ -162,6 +162,7 @@ private fun AppRoot(activityVm: CounterViewModel) {
                 onAutoUpdateChange = { v -> scope.launch { prefs.setAutoUpdate(v) } },
                 onVolumeKeysChange = { v -> scope.launch { prefs.setVolumeKeys(v) } },
                 onCounterBackgroundChange = { v -> scope.launch { prefs.setCounterBackground(v) } },
+                onClearPattern = { activityVm.clearPattern() },
                 onBack = { screen = Screen.Main },
                 repoOwner = REPO_OWNER,
                 repoName = REPO_NAME,

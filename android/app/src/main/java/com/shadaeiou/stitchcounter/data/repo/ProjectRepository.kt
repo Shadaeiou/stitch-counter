@@ -102,6 +102,23 @@ class ProjectRepository(
         return updated
     }
 
+    suspend fun clearPattern(project: Project): Project {
+        val updated = project.copy(
+            count = 0,
+            pdfPath = null,
+            currentPage = 0,
+            notes = "",
+            knitPattern = "",
+            patternHtml = "",
+            patternHighlightRange = "",
+            updatedAt = System.currentTimeMillis(),
+        )
+        projectDao.update(updated)
+        historyDao.clear(project.id)
+        annotationDao.clearForProject(project.id)
+        return updated
+    }
+
     suspend fun saveStrokes(projectId: Long, page: Int, strokes: List<Stroke>) {
         annotationDao.upsert(PageAnnotation(projectId = projectId, page = page, strokesJson = strokes.toJson()))
     }

@@ -262,6 +262,13 @@ class CounterViewModel(
         repository.saveStrokes(p.id, -1, patternStrokes.value + toRestore)
     }
 
+    fun clearPattern() = viewModelScope.launch {
+        val p = _project.value ?: return@launch
+        _redoStack.value = emptyList()
+        _patternRedoStack.value = emptyList()
+        _project.value = repository.clearPattern(p)
+    }
+
     fun toggleLock() {
         _locked.value = !_locked.value
     }

@@ -313,7 +313,7 @@ fun CounterArea(
                                 }
                             }
                             Text(
-                                "next row",
+                                "current row",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = Color.White.copy(alpha = 0.7f),
                             )
