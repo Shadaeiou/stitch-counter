@@ -134,6 +134,9 @@ private fun AppRoot(activityVm: CounterViewModel, knitProjectVm: KnitProjectView
     }
 
     val notes by activityVm.notes.collectAsState(initial = emptyList())
+    val counterProject by activityVm.project.collectAsState()
+    val counterCount = counterProject?.count ?: 0
+    val currentRowLabel by activityVm.currentRowLabel.collectAsState()
 
     when (screen) {
         Screen.Main -> MainScreen(
@@ -183,6 +186,11 @@ private fun AppRoot(activityVm: CounterViewModel, knitProjectVm: KnitProjectView
             BackHandler { screen = Screen.Main }
             ProjectsScreen(
                 vm = knitProjectVm,
+                count = counterCount,
+                currentRowLabel = currentRowLabel,
+                counterBackgroundArgb = counterBg,
+                onGoToCounter = { screen = Screen.Main },
+                onOpenSettings = { screen = Screen.Settings },
                 onBack = { screen = Screen.Main },
             )
         }

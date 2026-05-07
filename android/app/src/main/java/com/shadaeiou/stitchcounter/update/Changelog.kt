@@ -13,6 +13,16 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 41,
+        versionName = "0.1.41",
+        notes = listOf(
+            "Projects icon is now centered in the bottom toolbar with an accent color that complements your chosen counter background.",
+            "Projects icon is slightly larger than other toolbar icons for quick access.",
+            "When on the Projects screen the toolbar strips counter-only buttons and shows a live counter button in the center — tap it to jump straight back to your counter.",
+            "The counter button displays your current row number (and knit-pattern step if set) in real time.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 40,
         versionName = "0.1.40",
         notes = listOf(

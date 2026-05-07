@@ -26,6 +26,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+private const val ROW_STEP_SEP = "|||"
+
 enum class Tool { None, Pen, Eraser }
 
 class CounterViewModel(
@@ -80,6 +82,10 @@ class CounterViewModel(
     val patternHighlightRange: StateFlow<String> = _project
         .map { it?.patternHighlightRange.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+
+    val currentRowLabel: StateFlow<String?> = _project
+        .map { p -> computeRowLabel(p?.count ?: 0, p?.knitPattern.orEmpty()) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _patternTool = MutableStateFlow(Tool.None)
     val patternTool: StateFlow<Tool> = _patternTool.asStateFlow()
@@ -321,6 +327,21 @@ class CounterViewModel(
         val toRestore = redo.last()
         _redoStack.value = redo.dropLast(1)
         repository.saveStrokes(p.id, p.currentPage, strokes.value + toRestore)
+    }
+
+    private fun computeRowLabel(count: Int, knitPattern: String): String? {
+        if (knitPattern.isBlank()) return null
+        val next = (count + 1).coerceAtLeast(0)
+        if (knitPattern.contains(ROW_STEP_SEP)) {
+            val parts = knitPattern.split(ROW_STEP_SEP)
+            val steps = parts.take(4).filter { it.isNotBlank() }
+            if (steps.isEmpty()) return null
+            val every = parts.getOrNull(4)?.toIntOrNull()?.coerceIn(1, 999) ?: 1
+            return steps[(next / every) % steps.size]
+        }
+        val cleaned = knitPattern.filter { it == 'K' || it == 'P' }
+        if (cleaned.isEmpty()) return null
+        return cleaned[next % cleaned.length].toString()
     }
 
     @Suppress("UNUSED_PARAMETER")

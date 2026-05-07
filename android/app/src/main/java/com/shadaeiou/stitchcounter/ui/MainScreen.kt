@@ -267,6 +267,7 @@ fun MainScreen(
                 pdfHidden = pdfHidden,
                 hasPattern = hasPattern,
                 patternHidden = patternHidden,
+                counterBackgroundArgb = counterBackgroundArgb,
                 onUploadPdf = { pdfPicker.launch(arrayOf("application/pdf")) },
                 onTogglePdfHidden = {
                     pdfHidden = !pdfHidden

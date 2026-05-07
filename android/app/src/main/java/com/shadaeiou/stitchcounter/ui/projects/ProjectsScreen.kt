@@ -72,6 +72,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shadaeiou.stitchcounter.data.db.entities.KnitProject
+import com.shadaeiou.stitchcounter.ui.toolbar.ProjectsToolbar
 import com.shadaeiou.stitchcounter.viewmodel.KnitProjectViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -85,7 +86,15 @@ private const val CRAFT_KNIT = "knit"
 private const val CRAFT_CROCHET = "crochet"
 
 @Composable
-fun ProjectsScreen(vm: KnitProjectViewModel, onBack: () -> Unit) {
+fun ProjectsScreen(
+    vm: KnitProjectViewModel,
+    count: Int,
+    currentRowLabel: String?,
+    counterBackgroundArgb: Long,
+    onGoToCounter: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onBack: () -> Unit,
+) {
     val projects by vm.projects.collectAsStateWithLifecycle()
     var detailId by remember { mutableStateOf<Long?>(null) }
     val scope = rememberCoroutineScope()
@@ -94,6 +103,11 @@ fun ProjectsScreen(vm: KnitProjectViewModel, onBack: () -> Unit) {
         BackHandler { onBack() }
         ProjectListView(
             projects = projects,
+            count = count,
+            currentRowLabel = currentRowLabel,
+            counterBackgroundArgb = counterBackgroundArgb,
+            onGoToCounter = onGoToCounter,
+            onOpenSettings = onOpenSettings,
             onBack = onBack,
             onOpenDetail = { detailId = it },
             onCreate = {
@@ -108,6 +122,11 @@ fun ProjectsScreen(vm: KnitProjectViewModel, onBack: () -> Unit) {
         val project = projects.find { it.id == id }
         ProjectDetailView(
             project = project,
+            count = count,
+            currentRowLabel = currentRowLabel,
+            counterBackgroundArgb = counterBackgroundArgb,
+            onGoToCounter = onGoToCounter,
+            onOpenSettings = onOpenSettings,
             vm = vm,
             onBack = { detailId = null },
             onDelete = {
@@ -122,6 +141,11 @@ fun ProjectsScreen(vm: KnitProjectViewModel, onBack: () -> Unit) {
 @Composable
 private fun ProjectListView(
     projects: List<KnitProject>,
+    count: Int,
+    currentRowLabel: String?,
+    counterBackgroundArgb: Long,
+    onGoToCounter: () -> Unit,
+    onOpenSettings: () -> Unit,
     onBack: () -> Unit,
     onOpenDetail: (Long) -> Unit,
     onCreate: () -> Unit,
@@ -139,6 +163,15 @@ private fun ProjectListView(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
+            )
+        },
+        bottomBar = {
+            ProjectsToolbar(
+                count = count,
+                currentRowLabel = currentRowLabel,
+                counterBackgroundArgb = counterBackgroundArgb,
+                onGoToCounter = onGoToCounter,
+                onOpenSettings = onOpenSettings,
             )
         },
         floatingActionButton = {
@@ -349,6 +382,11 @@ private fun StatusBadge(status: String) {
 @Composable
 private fun ProjectDetailView(
     project: KnitProject?,
+    count: Int,
+    currentRowLabel: String?,
+    counterBackgroundArgb: Long,
+    onGoToCounter: () -> Unit,
+    onOpenSettings: () -> Unit,
     vm: KnitProjectViewModel,
     onBack: () -> Unit,
     onDelete: () -> Unit,
@@ -435,6 +473,15 @@ private fun ProjectDetailView(
                         )
                     }
                 },
+            )
+        },
+        bottomBar = {
+            ProjectsToolbar(
+                count = count,
+                currentRowLabel = currentRowLabel,
+                counterBackgroundArgb = counterBackgroundArgb,
+                onGoToCounter = onGoToCounter,
+                onOpenSettings = onOpenSettings,
             )
         },
     ) { padding ->
