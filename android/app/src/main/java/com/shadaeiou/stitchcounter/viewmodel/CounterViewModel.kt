@@ -331,17 +331,17 @@ class CounterViewModel(
 
     private fun computeRowLabel(count: Int, knitPattern: String): String? {
         if (knitPattern.isBlank()) return null
-        val next = (count + 1).coerceAtLeast(0)
+        val safe = count.coerceAtLeast(0)
         if (knitPattern.contains(ROW_STEP_SEP)) {
             val parts = knitPattern.split(ROW_STEP_SEP)
             val steps = parts.take(4).filter { it.isNotBlank() }
             if (steps.isEmpty()) return null
             val every = parts.getOrNull(4)?.toIntOrNull()?.coerceIn(1, 999) ?: 1
-            return steps[(next / every) % steps.size]
+            return steps[(safe / every) % steps.size]
         }
         val cleaned = knitPattern.filter { it == 'K' || it == 'P' }
         if (cleaned.isEmpty()) return null
-        return cleaned[next % cleaned.length].toString()
+        return cleaned[safe % cleaned.length].toString()
     }
 
     @Suppress("UNUSED_PARAMETER")

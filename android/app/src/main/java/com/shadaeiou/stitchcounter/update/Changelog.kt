@@ -13,6 +13,14 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 43,
+        versionName = "0.1.43",
+        notes = listOf(
+            "Fix: knit pattern row label now shows the correct step for the current row (was off by one).",
+            "Pattern import box accepts plain text — paste your pattern directly without needing a URL.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 42,
         versionName = "0.1.42",
         notes = listOf(

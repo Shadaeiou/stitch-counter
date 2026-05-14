@@ -155,12 +155,21 @@ fun PatternScreen(
     }
 
     fun fetchUrl() {
-        val url = urlInput.trim()
-        if (url.isEmpty()) return
+        val input = urlInput.trim()
+        if (input.isEmpty()) return
+        val looksLikeUrl = input.startsWith("http://") || input.startsWith("https://") ||
+            input.startsWith("www.") ||
+            (!input.contains(' ') && !input.contains('\n') && input.contains('.'))
+        if (!looksLikeUrl) {
+            val html = plainTextToHtml(input)
+            webViewRef?.evaluateJavascript("setContent(${Json.encodeToString(html)})", null)
+            urlInput = ""
+            return
+        }
         isLoading = true
         errorMessage = null
         scope.launch {
-            val result = withContext(Dispatchers.IO) { PatternFetcher.fetchPatternFromUrl(url) }
+            val result = withContext(Dispatchers.IO) { PatternFetcher.fetchPatternFromUrl(input) }
             isLoading = false
             if (result.isSuccess) {
                 val html = plainTextToHtml(result.getOrThrow())
@@ -211,9 +220,9 @@ fun PatternScreen(
                 OutlinedTextField(
                     value = urlInput,
                     onValueChange = { urlInput = it },
-                    placeholder = { Text("Paste URL to import pattern…") },
+                    placeholder = { Text("Paste URL or pattern text…") },
                     modifier = Modifier.weight(1f),
-                    singleLine = true,
+                    maxLines = 6,
                 )
                 IconButton(onClick = { fetchUrl() }, enabled = !isLoading && urlInput.isNotBlank()) {
                     if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
