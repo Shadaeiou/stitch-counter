@@ -13,6 +13,13 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 44,
+        versionName = "0.1.44",
+        notes = listOf(
+            "Paragraph breaks are now preserved when pasting plain-text patterns into the import box.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 43,
         versionName = "0.1.43",
         notes = listOf(

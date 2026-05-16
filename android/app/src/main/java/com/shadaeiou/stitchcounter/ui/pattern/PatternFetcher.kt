@@ -170,8 +170,9 @@ object PatternFetcher {
 // Convert mixed text (with [PHOTO:url] markers) to editor HTML.
 // Text paragraphs are HTML-escaped; photo markers become tappable thumbnails.
 fun plainTextToHtml(text: String): String {
+    val normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     val photoMarker = Regex("""^\[PHOTO:(.+)\]$""")
-    return text.split("\n\n")
+    return normalized.split("\n\n")
         .filter { it.isNotBlank() }
         .joinToString("") { para ->
             val trimmed = para.trim()
