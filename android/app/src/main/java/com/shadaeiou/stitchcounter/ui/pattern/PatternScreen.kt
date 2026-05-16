@@ -93,6 +93,7 @@ private val EDITOR_HTML = """
     content: "Pattern text will appear here after fetching a URL. You can also type or paste directly.";
     color: #666; display: block;
   }
+  p { margin-bottom: 0.75em; }
   ul, ol { padding-left: 24px; }
   li { margin: 3px 0; }
   .pattern-photo { text-align: center; margin: 12px 0; }
