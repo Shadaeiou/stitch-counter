@@ -13,6 +13,13 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 46,
+        versionName = "0.1.46",
+        notes = listOf(
+            "Highlighted text now shows in black so it's readable against light highlighter colors; removing a highlight restores white text.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 45,
         versionName = "0.1.45",
         notes = listOf(

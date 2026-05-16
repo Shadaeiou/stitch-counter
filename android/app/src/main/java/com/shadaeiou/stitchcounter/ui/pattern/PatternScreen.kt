@@ -113,6 +113,11 @@ function execCmd(cmd, val) {
   document.execCommand(cmd, false, val != null ? val : null);
   document.getElementById('editor').focus();
 }
+function applyHighlight(color) {
+  document.execCommand('hiliteColor', false, color);
+  document.execCommand('foreColor', false, color === 'inherit' ? '#f0f0f0' : '#000000');
+  document.getElementById('editor').focus();
+}
 // Tap on a photo thumbnail opens it in the system browser via the Android bridge.
 document.getElementById('editor').addEventListener('click', function(e) {
   var target = e.target;
@@ -309,14 +314,14 @@ private fun PatternFormatToolbar(enabled: Boolean, onCommand: (String) -> Unit) 
                 modifier = Modifier.size(28.dp).clip(CircleShape)
                     .background(composeColor)
                     .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape)
-                    .clickable(enabled = enabled) { onCommand("execCmd('hiliteColor','$hexColor')") },
+                    .clickable(enabled = enabled) { onCommand("applyHighlight('$hexColor')") },
             )
         }
         Box(
             modifier = Modifier.size(28.dp).clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape)
-                .clickable(enabled = enabled) { onCommand("execCmd('hiliteColor','inherit')") },
+                .clickable(enabled = enabled) { onCommand("applyHighlight('inherit')") },
             contentAlignment = Alignment.Center,
         ) {
             Text("✕", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
