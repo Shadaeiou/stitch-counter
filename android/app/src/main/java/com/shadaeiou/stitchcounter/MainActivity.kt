@@ -93,9 +93,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            setPictureInPictureParams(buildPipParams())
+        }
+    }
+
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        enterPictureInPictureMode(buildPipParams())
+        if (!isFinishing && !isInPictureInPictureMode) {
+            enterPictureInPictureMode(buildPipParams())
+        }
     }
 
     override fun onPictureInPictureModeChanged(
