@@ -13,6 +13,13 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 47,
+        versionName = "0.1.47",
+        notes = listOf(
+            "Paragraph breaks now appear correctly on the counting/pattern view screen.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 46,
         versionName = "0.1.46",
         notes = listOf(

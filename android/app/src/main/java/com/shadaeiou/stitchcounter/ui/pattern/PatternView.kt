@@ -65,6 +65,7 @@ private val VIEWER_HTML = """
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #1a1a1a; color: #f0f0f0; font-family: sans-serif; font-size: 16px; }
 #content { padding: 12px 12px 120px; line-height: 1.7; word-break: break-word; }
+p { margin-bottom: 0.75em; }
 ul, ol { padding-left: 24px; }
 li { margin: 3px 0; }
 #empty-msg { padding: 24px 16px; color: #666; font-size: 15px; }
