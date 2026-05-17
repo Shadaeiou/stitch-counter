@@ -22,12 +22,22 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden"
+            android:supportsPictureInPicture="true"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|screenSizeDp"
             android:theme="@style/Theme.StitchCounter">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".pip.PipActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.shadaeiou.stitchcounter.PIP_INCREMENT" />
+                <action android:name="com.shadaeiou.stitchcounter.PIP_DECREMENT" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

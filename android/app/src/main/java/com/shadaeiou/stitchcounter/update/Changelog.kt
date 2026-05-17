@@ -13,6 +13,14 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 49,
+        versionName = "0.1.49",
+        notes = listOf(
+            "Picture-in-picture mode: press the home button while counting to get a floating counter window over other apps.",
+            "Tap the PiP window to reveal + and − buttons; the count saves instantly and is accurate when you return to the app.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 48,
         versionName = "0.1.48",
         notes = listOf(

@@ -1,7 +1,14 @@
 package com.shadaeiou.stitchcounter
 
+import android.app.PendingIntent
+import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.Intent
+import android.content.res.Configuration
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
+import android.util.Rational
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -11,6 +18,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -25,9 +34,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
+import com.shadaeiou.stitchcounter.pip.ACTION_PIP_DECREMENT
+import com.shadaeiou.stitchcounter.pip.ACTION_PIP_INCREMENT
+import com.shadaeiou.stitchcounter.pip.PipActionReceiver
 import com.shadaeiou.stitchcounter.ui.MainScreen
 import com.shadaeiou.stitchcounter.ui.notes.NotesScreen
 import com.shadaeiou.stitchcounter.ui.pattern.PatternScreen
@@ -51,6 +67,8 @@ class MainActivity : ComponentActivity() {
     val counterVm: CounterViewModel by viewModels { CounterViewModel.Factory() }
     val knitProjectVm: KnitProjectViewModel by viewModels { KnitProjectViewModel.Factory() }
 
+    private val isInPip = mutableStateOf(false)
+
     @Volatile private var volumeKeysEnabled: Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,10 +83,55 @@ class MainActivity : ComponentActivity() {
         setContent {
             StitchCounterTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AppRoot(activityVm = counterVm, knitProjectVm = knitProjectVm)
+                    AppRoot(
+                        activityVm = counterVm,
+                        knitProjectVm = knitProjectVm,
+                        isInPip = isInPip.value,
+                    )
                 }
             }
         }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        enterPictureInPictureMode(buildPipParams())
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration,
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        isInPip.value = isInPictureInPictureMode
+    }
+
+    private fun buildPipParams(): PictureInPictureParams {
+        val incIntent = PendingIntent.getBroadcast(
+            this, 0,
+            Intent(this, PipActionReceiver::class.java).apply { action = ACTION_PIP_INCREMENT },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val decIntent = PendingIntent.getBroadcast(
+            this, 1,
+            Intent(this, PipActionReceiver::class.java).apply { action = ACTION_PIP_DECREMENT },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val incAction = RemoteAction(
+            Icon.createWithResource(this, R.drawable.ic_pip_increment),
+            "+", "Increment counter", incIntent,
+        )
+        val decAction = RemoteAction(
+            Icon.createWithResource(this, R.drawable.ic_pip_decrement),
+            "-", "Decrement counter", decIntent,
+        )
+        val builder = PictureInPictureParams.Builder()
+            .setAspectRatio(Rational(3, 2))
+            .setActions(listOf(decAction, incAction))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            builder.setAutoEnterEnabled(true)
+        }
+        return builder.build()
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -87,7 +150,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-                return true  // always swallow so system volume doesn't change
+                return true
             }
         }
         return super.dispatchKeyEvent(event)
@@ -95,7 +158,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AppRoot(activityVm: CounterViewModel, knitProjectVm: KnitProjectViewModel) {
+private fun AppRoot(
+    activityVm: CounterViewModel,
+    knitProjectVm: KnitProjectViewModel,
+    isInPip: Boolean,
+) {
     val app = StitchCounterApp.instance
     val prefs = app.prefs
 
@@ -110,11 +177,9 @@ private fun AppRoot(activityVm: CounterViewModel, knitProjectVm: KnitProjectView
     var pending by remember { mutableStateOf<UpdateInfo?>(null) }
     var screen by remember { mutableStateOf(Screen.Main) }
 
-    // Runtime permission for notifications (Android 13+). We request it once so
-    // the OS can post the update notification to the tray even when app is closed.
     val notifPermLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* result handled silently — notification posted on next check */ }
+    ) { /* result handled silently */ }
 
     LaunchedEffect(autoUpdate) {
         if (!autoUpdate) return@LaunchedEffect
@@ -133,10 +198,15 @@ private fun AppRoot(activityVm: CounterViewModel, knitProjectVm: KnitProjectView
         }
     }
 
-    val notes by activityVm.notes.collectAsState(initial = emptyList())
     val counterProject by activityVm.project.collectAsState()
+    val notes by activityVm.notes.collectAsState(initial = emptyList())
     val counterCount = counterProject?.count ?: 0
     val currentRowLabel by activityVm.currentRowLabel.collectAsState()
+
+    if (isInPip) {
+        PipCounterView(count = counterCount)
+        return
+    }
 
     when (screen) {
         Screen.Main -> MainScreen(
@@ -220,6 +290,23 @@ private fun AppRoot(activityVm: CounterViewModel, knitProjectVm: KnitProjectView
             dismissButton = {
                 TextButton(onClick = { pending = null }) { Text("Later") }
             },
+        )
+    }
+}
+
+@Composable
+private fun PipCounterView(count: Int) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = count.toString(),
+            color = Color.White,
+            fontSize = 64.sp,
+            fontWeight = FontWeight.Bold,
         )
     }
 }

@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.shadaeiou.stitchcounter.StitchCounterApp
 import com.shadaeiou.stitchcounter.data.db.entities.HistoryEntry
+import com.shadaeiou.stitchcounter.pip.PipAction
+import com.shadaeiou.stitchcounter.pip.PipEvents
 import com.shadaeiou.stitchcounter.data.db.entities.Project
 import com.shadaeiou.stitchcounter.data.notes.NoteItem
 import com.shadaeiou.stitchcounter.data.notes.parseNotes
@@ -117,6 +119,14 @@ class CounterViewModel(
     init {
         viewModelScope.launch {
             _project.value = repository.ensureProject()
+        }
+        viewModelScope.launch {
+            PipEvents.actions.collect { action ->
+                when (action) {
+                    PipAction.INCREMENT -> increment()
+                    PipAction.DECREMENT -> decrement()
+                }
+            }
         }
     }
 
