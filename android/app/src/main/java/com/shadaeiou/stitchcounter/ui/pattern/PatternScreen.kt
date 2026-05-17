@@ -72,6 +72,7 @@ private val HIGHLIGHT_COLORS = listOf(
     Color(0xFFFFFF00) to "#FFFF00",
     Color(0xFF90EE90) to "#90EE90",
     Color(0xFF00FFFF) to "#00FFFF",
+    Color(0xFFFF6B6B) to "#FF6B6B",
     Color(0xFFFF69B4) to "#FF69B4",
     Color(0xFFFFA500) to "#FFA500",
     Color(0xFFADD8E6) to "#ADD8E6",

@@ -13,6 +13,13 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 48,
+        versionName = "0.1.48",
+        notes = listOf(
+            "Red highlight color added to the pattern editor toolbar.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 47,
         versionName = "0.1.47",
         notes = listOf(
