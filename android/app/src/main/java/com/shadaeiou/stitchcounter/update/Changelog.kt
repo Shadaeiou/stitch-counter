@@ -13,8 +13,8 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
-        versionCode = 50,
-        versionName = "0.1.50",
+        versionCode = 51,
+        versionName = "0.1.51",
         notes = listOf(
             "Fix: pressing Back no longer accidentally enters picture-in-picture mode.",
         ),

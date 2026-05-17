@@ -4,7 +4,6 @@ import android.app.PendingIntent
 import android.app.PictureInPictureParams
 import android.app.RemoteAction
 import android.content.Intent
-import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
@@ -76,6 +75,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        addOnPictureInPictureModeChangedListener { info ->
+            isInPip.value = info.isInPictureInPictureMode
+        }
+
         lifecycleScope.launch {
             StitchCounterApp.instance.prefs.volumeKeysFlow.collect { volumeKeysEnabled = it }
         }
@@ -105,14 +108,6 @@ class MainActivity : ComponentActivity() {
         if (!isFinishing && !isInPictureInPictureMode) {
             enterPictureInPictureMode(buildPipParams())
         }
-    }
-
-    override fun onPictureInPictureModeChanged(
-        isInPictureInPictureMode: Boolean,
-        newConfig: Configuration,
-    ) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-        isInPip.value = isInPictureInPictureMode
     }
 
     private fun buildPipParams(): PictureInPictureParams {
