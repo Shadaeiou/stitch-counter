@@ -210,7 +210,7 @@ private fun AppRoot(
     val currentRowLabel by activityVm.currentRowLabel.collectAsState()
 
     if (isInPip) {
-        PipCounterView(count = counterCount)
+        PipCounterView(count = counterCount + 1)
         return
     }
 

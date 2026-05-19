@@ -16,7 +16,7 @@ val Changelog: List<ChangelogEntry> = listOf(
         versionCode = 53,
         versionName = "0.1.53",
         notes = listOf(
-            "Picture-in-picture now shows a 'Current Row' label above the counter number.",
+            "Picture-in-picture shows 'Current Row' label and the correct current-row number (count + 1).",
         ),
     ),
     ChangelogEntry(
