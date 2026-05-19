@@ -18,7 +18,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -306,12 +308,22 @@ private fun PipCounterView(count: Int) {
             .background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = count.toString(),
-            color = Color.White,
-            fontSize = 64.sp,
-            fontWeight = FontWeight.Bold,
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = "Current Row",
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 16.sp,
+            )
+            Text(
+                text = count.toString(),
+                color = Color.White,
+                fontSize = 64.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 

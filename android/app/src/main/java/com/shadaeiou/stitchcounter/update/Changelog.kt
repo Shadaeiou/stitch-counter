@@ -13,6 +13,13 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 53,
+        versionName = "0.1.53",
+        notes = listOf(
+            "Picture-in-picture now shows a 'Current Row' label above the counter number.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 52,
         versionName = "0.1.52",
         notes = listOf(
