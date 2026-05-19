@@ -13,6 +13,13 @@ data class ChangelogEntry(
 
 val Changelog: List<ChangelogEntry> = listOf(
     ChangelogEntry(
+        versionCode = 52,
+        versionName = "0.1.52",
+        notes = listOf(
+            "Fix: remove invalid 'screenSizeDp' config-change attribute that broke CI builds 49–51.",
+        ),
+    ),
+    ChangelogEntry(
         versionCode = 51,
         versionName = "0.1.51",
         notes = listOf(
